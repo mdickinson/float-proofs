@@ -156,6 +156,9 @@ rewrite ?twopower_Z_Q_compat; try trivial.
 unfold Qmult. unfold Qeq. rewrite twopower_sum; trivial.
 Qed.
 
+
+
+
 (* Now address case where m < 0 and n >= 0.  Let p = m + n.
    2^p = 2^m * 2^n <-> 2^(-m) * 2^p = 2^n  (because 2^(-m) * 2^m = 1)
    if p >= 0, we're done.  If p < 0, do a further transformation:
