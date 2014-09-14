@@ -111,59 +111,109 @@ Section binade_for_rationals.
 Variable x : Q.
 
 Let shift := (binade_Z (Qnum x) - binade_Z (' Qden x))%Z.
-Definition binade_Q : Z := if Qlt_le_dec x (twopower_Q shift) then (shift - 1)%Z else shift%Z.
 
-
+Definition binade_Q : Z :=
+  if Qlt_le_dec x (twopower_Q shift)
+  then (shift - 1)%Z
+  else shift%Z.
 
 End binade_for_rationals.
 
+Lemma Qden_inverse : forall p : Z,
+  (0 < p)%Z -> (' Qden (/ inject_Z p) = p).
+Proof.
+  unfold inject_Z. unfold Qinv. simpl.
+  intros.
+  case_eq p; intro.
+    absurd (p = 0)%Z; auto with zarith.
+    reflexivity.    
+    intro.
+    assert (p < 0)%Z.
+    rewrite H0.
+    apply Zlt_neg_0.
+    absurd (0 < p)%Z; auto with zarith.
+Qed.
+
+
+Lemma Qnum_inverse : forall p : Z,
+  (0 < p)%Z -> ((Qnum (/ inject_Z p)) = 1)%Z.
+Proof.
+  unfold inject_Z. unfold Qinv. simpl.
+  intros.
+  case_eq p; intro.
+    absurd (p = 0)%Z; auto with zarith.
+    reflexivity.
+    intro.
+    assert (p < 0)%Z.
+    rewrite H0.
+    apply Zlt_neg_0.
+    absurd (0 < p)%Z; auto with zarith.
+Qed.
+    
 
 Lemma twopower_binade_Q_unit : forall m : Z,
   m = binade_Q (twopower_Q m).
 
 Proof.
-destruct m.
+  intro m. unfold binade_Q.
+  remember ((binade_Z (Qnum (twopower_Q m)) -
+             binade_Z (' Qden (twopower_Q m))))%Z as shift.
+  unfold twopower_Q.
+  destruct (Z_lt_le_dec m 0).
+    (* Case m < 0. *)
+    assert (Qnum (twopower_Q m) = 1)%Z.
+      unfold twopower_Q.
+      destruct (Z_lt_le_dec m 0).
+      apply Qnum_inverse. apply twopower_positive. auto with zarith.
+      absurd (m < 0)%Z; auto with zarith.
+    assert (' Qden (twopower_Q m) = (twopower_Z (-m)))%Z.
+      unfold twopower_Q.
+      destruct (Z_lt_le_dec m 0).
+      apply Qden_inverse. apply twopower_positive. auto with zarith.
+      absurd (m < 0)%Z; auto with zarith.
+    assert (binade_Z (Qnum (twopower_Q m)) = 0)%Z.
+      rewrite H. reflexivity.
+    assert (binade_Z (' Qden (twopower_Q m)) = -m)%Z.
+      rewrite H0.
+      symmetry.
+      apply twopower_binade_unit. auto with zarith.
+    assert (shift = m).
+      rewrite Heqshift. rewrite H1. rewrite H2. auto with zarith.
+      rewrite H3.
+      destruct (Z_lt_le_dec m 0).
+      generalize (/ inject_Z (twopower_Z (-m))). intro q.
+      destruct (Qlt_le_dec q q).
+      absurd (q < q); auto with qarith. reflexivity.
+      absurd (m < 0)%Z; auto with zarith.
 
-(* Case m = 0. *)
-unfold binade_Q. simpl. reflexivity.
-
-(* Case m > 0, m = 'p. *)
-
-unfold twopower_Q.
-unfold binade_Q. simpl.
-rewrite <- twopower_binade_unit.
-replace (' p - 0)%Z with (' p) by ring.
-unfold twopower_Q.
-generalize (twopower_Z (' p) # 1). intros.
-destruct (Qlt_le_dec q q).
-absurd (q < q). auto with qarith. trivial. trivial.
-auto with zarith.
-
-(* Case m < 0, -m = 'p. *)
-unfold twopower_Q.
-replace (- Z.neg p)%Z with (' p) by auto with zarith.
-unfold binade_Q. simpl Qnum. simpl (' Qden _). simpl (binade_Z 1).
-rewrite Z2Pos.id.
-rewrite <- twopower_binade_unit.
-unfold twopower_Q. simpl.
-generalize (1 # Z.to_pos (twopower_Z (' p))). intros.
-destruct (Qlt_le_dec _ _).
-absurd (q < q). auto with qarith. trivial. trivial.
-auto with zarith.
-
-apply twopower_positive. auto with zarith.
-Qed.
-
-Lemma twopower_Z_Q : forall m : Z, (0 <= m)%Z ->
-   twopower_Q m = (twopower_Z m) # 1.
-Proof.
-unfold twopower_Q.
-destruct m.
-intro. unfold twopower_Z. simpl. reflexivity.
-reflexivity.
-intros.
-absurd (0 <= Z.neg p)%Z. auto with zarith. trivial.
-Qed.
+    (* Case m >= 0. *)
+    assert (Qnum (twopower_Q m) = twopower_Z m).
+      unfold twopower_Q.
+      destruct (Z_lt_le_dec m 0).
+      absurd (m < 0)%Z; auto with zarith.
+      reflexivity.
+    assert (' Qden (twopower_Q m) = 1)%Z.
+      unfold twopower_Q.
+      destruct (Z_lt_le_dec m 0).
+      absurd (m < 0)%Z; auto with zarith.
+      reflexivity.
+    assert (binade_Z (Qnum (twopower_Q m)) = m)%Z.
+      rewrite H.
+      symmetry.
+      apply twopower_binade_unit.
+      auto with zarith.
+    assert (binade_Z (' Qden (twopower_Q m)) = 0)%Z.
+      rewrite H0. reflexivity.
+    assert (shift = m).
+      rewrite Heqshift. rewrite H1. rewrite H2. auto with zarith.
+    rewrite H3.
+    destruct (Z_lt_le_dec m 0).
+    absurd (m < 0)%Z; auto with zarith.
+    generalize (inject_Z (twopower_Z m)). intro q.
+    destruct (Qlt_le_dec q q).
+    absurd (q < q); auto with qarith.
+    reflexivity.
+Qed.  
 
 
 Lemma Q_inv_lt : forall a b : Q,
@@ -226,25 +276,6 @@ apply Q_inv_le. assumption. assumption.
 Qed.
 
 
-Lemma twopower_Q_monotonic :
-  forall m n : Z, (m <= n)%Z -> twopower_Q m <= twopower_Q n.
-Proof.
-intros m n m_le_n.
-(* We can use the multiplicativity properties to reduce to the case
-   where both m and n are nonnegative. *)
-
-(* Find a suitable multiplier, k. *)
-assert (exists k:Z, 0 <= m + k /\ 0 <= n + k)%Z.
-destruct (Z_lt_le_dec m n); [exists (-m)%Z | exists (-n)%Z]; split; auto with zarith.
-elim H; intros; clear H. elim H0; intros; clear H0.
-
-apply Qmult_le_r with (z := twopower_Q x). apply twopower_positive_Q.
-rewrite <- ?twopower_sum_Q.
-rewrite ?twopower_Z_Q. unfold Qle. simpl. rewrite ?Z.mul_1_r.
-apply twopower_monotonic. auto with zarith. assumption. assumption.
-Qed.
-
-
 Lemma twopower_binade_Q_counit : forall x : Q, 0 < x ->
   twopower_Q (binade_Q x) <= x.
 Proof.
@@ -278,13 +309,13 @@ assert (' Qden x <= twopower_Z (binade_Z (' Qden x) + 1))%Z.
 auto with zarith. clear H0.
 
 assert (twopower_Q (binade_Z (Qnum x)) <= Qnum x # 1).
-rewrite twopower_Z_Q.
+rewrite twopower_Z_Q_compat.
 unfold Qle. simpl.
 rewrite ?Z.mul_1_r. trivial.
 apply binade_nonnegative.
 
 assert (' Qden x # 1 <= twopower_Q (binade_Z (' Qden x) + 1)).
-rewrite twopower_Z_Q.
+rewrite twopower_Z_Q_compat.
 unfold Qle. simpl (Qden (_ # 1)).
 rewrite ?Z.mul_1_r.
 apply H1. assert (0 <= binade_Z (' Qden x))%Z by apply binade_nonnegative. omega.
@@ -349,14 +380,14 @@ destruct (Qlt_le_dec x (twopower_Q shift)).
 replace (shift - 1 + 1)%Z with shift by auto with zarith. assumption.
 
 assert (Qnum x # 1 < twopower_Q (binade_Z (Qnum x) + 1)).
-rewrite twopower_Z_Q.
+rewrite twopower_Z_Q_compat.
 apply remove_denominator_lt.
 apply twopower_binade_counit2.
 revert x_positive. unfold Qlt. simpl. rewrite ?Z.mul_1_r. trivial.
 assert (0 <= binade_Z (Qnum x))%Z. apply binade_nonnegative. auto with zarith.
 
 assert (twopower_Q (binade_Z (' Qden x)%Z) <= 'Qden x # 1).
-rewrite twopower_Z_Q.
+rewrite twopower_Z_Q_compat.
 apply remove_denominator_le.
 apply twopower_binade_counit.
 auto with zarith.
@@ -470,4 +501,3 @@ Qed.
 
 
 End binade_and_twopower.
-

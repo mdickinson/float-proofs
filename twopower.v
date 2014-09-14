@@ -67,6 +67,12 @@ Proof.
 intros. unfold twopower_Z. apply shiftl_positive. trivial. omega.
 Qed.
 
+Lemma twopower_nonzero : forall (m : Z), 0 <= m -> twopower_Z m <> 0.
+Proof.
+intros. assert (0 < twopower_Z m) by (apply twopower_positive; assumption).
+auto with zarith.
+Qed.
+
 Lemma twopower_sum : forall (m n : Z), 0 <= m -> 0 <= n ->
   twopower_Z (m + n) = twopower_Z m * twopower_Z n.
 Proof.
@@ -89,142 +95,139 @@ assert (0 < Z.shiftl 1 (n - m)).
 apply shiftl_positive. omega. omega. omega.
 Qed.
 
+Arguments twopower_Z _ : simpl never.
+
 Open Scope Q.
 
-Definition twopower_Q (n : Z) : Q :=
-  match n with
-  | 0%Z => 1
-  | Z.pos p => twopower_Z n # 1
-  | Z.neg p => 1 # Z.to_pos (twopower_Z (-n))
-  end.
+Definition twopower_Q (m : Z) : Q :=
+  if Z_lt_le_dec m 0
+  then / inject_Z (twopower_Z (-m))
+  else inject_Z (twopower_Z m).
 
 Lemma twopower_zero_Q : twopower_Q 0 == 1.
 Proof.
 reflexivity.
 Qed.
 
-Lemma twopower_Z_Q_compat : forall (n : Z), (0 <= n)%Z -> twopower_Q n == (twopower_Z n) # 1.
+Lemma twopower_Z_Q_compat : forall (m : Z),
+  (0 <= m)%Z -> twopower_Q m == inject_Z (twopower_Z m).
 Proof.
-intros.
-destruct n. reflexivity. reflexivity.
-absurd (0 <= Z.neg p)%Z. auto with zarith. trivial.
+intros. unfold twopower_Q.
+destruct (Z_lt_le_dec m 0). absurd (m < 0)%Z. auto with zarith. trivial.
+reflexivity.
 Qed.
-
-Arguments twopower_Z _ : simpl never.
 
 Lemma twopower_positive_Q : forall m : Z, 0 < twopower_Q m.
 Proof.
-unfold Qlt. unfold twopower_Q. intro m. destruct m.
-simpl. auto with zarith.
-simpl. rewrite Z.mul_1_r. apply twopower_positive. auto with zarith.
-simpl. auto with zarith.
+  intros; unfold twopower_Q; destruct (Z_lt_le_dec m 0);
+  [ apply Qinv_lt_0_compat | ];
+  setoid_replace 0 with (inject_Z 0) by reflexivity;
+  rewrite <- Zlt_Qlt; apply twopower_positive; auto with zarith.
 Qed.
 
 Lemma twopower_nonzero_Q : forall m : Z, ~ twopower_Q m == 0.
 Proof.
 intro.
-assert (twopower_Q m > 0) by apply twopower_positive_Q.
+assert (0 < twopower_Q m) by apply twopower_positive_Q.
 auto with qarith.
+Qed.
+
+Lemma inject_Z_nonzero : forall x,
+   ~ (inject_Z x == 0)  <->  (x <> 0)%Z.
+Proof.
+  intros; split; intro; intro; apply H; apply inject_Z_injective; trivial.
+Qed.
+
+Lemma inject_twopower_nonzero : forall x,
+   (0 <= x)%Z -> ~ (inject_Z (twopower_Z x)) == 0.
+Proof.
+  intros x x_nonnegative. apply inject_Z_nonzero. apply twopower_nonzero.
+  assumption.
 Qed.
 
 Lemma twopower_inverse_Q : forall m : Z,
    twopower_Q m * twopower_Q (-m) == 1.
 Proof.
-unfold Qeq. unfold Qmult. simpl.
-destruct m. 
-(* case m = 0 *)
-trivial.
-(* case m > 0 *)
-simpl.
-assert (' Z.to_pos (twopower_Z (' p)) = twopower_Z ('p )).
-apply Z2Pos.id. apply twopower_positive. auto with zarith.
-rewrite H. ring.
-(* case m < 0 *)
-simpl.
-rewrite Pos2Z.inj_mul.
-rewrite Z2Pos.id.
-generalize (twopower_Z (' p)). intro. destruct z; trivial.
-apply twopower_positive. auto with zarith.
+intro m. unfold twopower_Q.
+destruct (Z_lt_le_dec m 0); destruct (Z_lt_le_dec (-m) 0).
+  (* m < 0 and -m < 0 *)
+  absurd (m < 0)%Z; auto with zarith.
+  (* m < 0 and 0 <= -m *)
+  field. apply inject_twopower_nonzero. assumption.
+  (* 0 <= m and -m < 0 *)
+  replace (--m)%Z with m by auto with zarith.
+  field. apply inject_twopower_nonzero. assumption.
+  (* 0 <= m and 0 <= -m *)
+  replace m with 0%Z by omega. reflexivity.
 Qed.
 
-Lemma twopower_sum_Q_restricted : forall (m n : Z),
-  (0 <= m)%Z -> (0 <= n)%Z -> twopower_Q (m + n) == twopower_Q m * twopower_Q n.
+Lemma twopower_as_quotient : forall m : Z,
+  twopower_Q m == inject_Z (twopower_Z (Zmax 0 m)) /
+                  inject_Z (twopower_Z (Zmax 0 (-m))).
 Proof.
-intros m n m_nonnegative n_nonnegative.
-assert (0 <= m + n)%Z. omega.
-rewrite ?twopower_Z_Q_compat; try trivial.
-unfold Qmult. unfold Qeq. rewrite twopower_sum; trivial.
+  intro m. unfold twopower_Q.
+  destruct (Z_lt_le_dec m 0).
+    replace (Z.max 0 (-m)) with (-m)%Z by (
+      symmetry; apply Z.max_r; auto with zarith).
+    replace (Z.max 0 m) with 0%Z by (
+      symmetry; apply Z.max_l; auto with zarith).
+    rewrite twopower_zero.
+    field. apply inject_twopower_nonzero. auto with zarith.
+
+    replace (Z.max 0 m) with m by (
+      symmetry; apply Z.max_r; auto with zarith).
+    replace (Z.max 0 (-m)) with 0%Z by (
+      symmetry; apply Z.max_l; auto with zarith).
+    rewrite twopower_zero.
+    field.
 Qed.
-
-
-
-
-(* Now address case where m < 0 and n >= 0.  Let p = m + n.
-   2^p = 2^m * 2^n <-> 2^(-m) * 2^p = 2^n  (because 2^(-m) * 2^m = 1)
-   if p >= 0, we're done.  If p < 0, do a further transformation:
-   <-> 2^(-m) = 2^n * 2^(-p). *)
-
-(* By symmetry, this also addresses the case where n < 0 and m >= 0. *)
-
-Lemma twopower_sum_Q_semi_restricted : forall (m n : Z),
-  (0 <= n)%Z -> twopower_Q (m + n) == twopower_Q m * twopower_Q n.
-Proof.
-intros m n n_nonnegative.
-destruct (Z_lt_le_dec m 0).
-apply Qmult_inj_l with (z := twopower_Q (- m)).
-apply twopower_nonzero_Q.
-rewrite Qmult_assoc.
-apply Qeq_trans with (y := twopower_Q m * twopower_Q (-m) * twopower_Q n).
-rewrite twopower_inverse_Q.
-rewrite Qmult_1_l.
-remember (-m)%Z as p.
-assert (p >= 0)%Z by auto with zarith.
-replace (m + n)%Z with (n - p)%Z by auto with zarith.
-
-(* Now split into cases again: either n - p >= 0, or n - p < 0. *)
-assert ({(n < p)%Z} + {(p <= n)%Z}) by apply Z_lt_le_dec.
-destruct H0.
-(* First, we're in the case where n < p. *)
-remember (n - p)%Z as q.
-apply Qmult_inj_r with (z := twopower_Q (- q)).
-assert (twopower_Q (-q) > 0) by apply twopower_positive_Q.
-auto with qarith.
-rewrite <- Qmult_assoc.
-rewrite twopower_inverse_Q.
-rewrite Qmult_1_r.
-remember (-q)%Z as r.
-assert (p = r + n)%Z by auto with zarith. rewrite H0.
-rewrite Qmult_comm.
-apply twopower_sum_Q_restricted. auto with zarith. trivial.
-(* Now, the case where n >= p, so n - p is nonnegative. *)
-remember (n - p)%Z as r.
-replace n with (p + r)%Z by auto with zarith.
-symmetry.
-apply twopower_sum_Q_restricted. auto with zarith. auto with zarith.
-ring.
-
-apply twopower_sum_Q_restricted. trivial. trivial.
-Qed.
-
 
 Lemma twopower_sum_Q : forall (m n : Z),
   twopower_Q (m + n) == twopower_Q m * twopower_Q n.
 Proof.
-intros.
-(* Destruct on the sign of n. *)
-destruct (Z_lt_le_dec n 0).
-(* Case n < 0. *)
-apply Qmult_inj_r with (z := twopower_Q (- n)).
-apply twopower_nonzero_Q.
-rewrite <- Qmult_assoc.
-rewrite twopower_inverse_Q.
-rewrite Qmult_1_r.
-remember (-n)%Z as p.
-remember (m + n)%Z as q.
-assert (m = q + p)%Z by auto with zarith.
-rewrite H.
-symmetry. apply twopower_sum_Q_semi_restricted. auto with zarith.
-apply twopower_sum_Q_semi_restricted. auto with zarith.
+  intros m n; unfold twopower_Q;
+  destruct (Z_lt_le_dec m 0); destruct (Z_lt_le_dec n 0);
+  destruct (Z_lt_le_dec (m + n) 0).
+    (* m, n and m + n all negative. -(m + n) = -m + -n. *)
+    replace (-(m + n))%Z with ((-m) + (-n))%Z by ring;
+    rewrite twopower_sum; [ | auto with zarith | auto with zarith];
+    rewrite inject_Z_mult; field;
+    try split; apply inject_twopower_nonzero; auto with zarith.
+
+    (* m, n negative; m + n nonnegative. Not possible. *) 
+    absurd (0 <= m + n)%Z; auto with zarith.
+
+    (* m and m + n negative and n nonnegative. (-m) = -(m + n) + n. *)
+    replace (-m)%Z with (-(m + n) + n)%Z by ring;
+    rewrite twopower_sum; [ | auto with zarith | auto with zarith];
+    rewrite inject_Z_mult; field;
+    try split; apply inject_twopower_nonzero; auto with zarith.
+
+    (* m negative, n and m + n nonnegative. n = (m + n) + (-m). *)
+    replace n with ((-m) + (m + n))%Z at 2 by ring;
+    rewrite (twopower_sum (-m) (m + n)); [ | auto with zarith | auto with zarith];
+    rewrite inject_Z_mult; field;
+    try split; apply inject_twopower_nonzero; auto with zarith.
+
+    (* n and m + n negative, m nonnegative.  -n = -(m + n) + m. *)
+    replace (-n)%Z with ((-(m + n)) + m)%Z by ring;
+    rewrite (twopower_sum (-(m + n)) m); [ | auto with zarith | auto with zarith];
+    rewrite inject_Z_mult; field;
+    try split; apply inject_twopower_nonzero; auto with zarith.
+
+    (* n negative, m and m + n nonnegative;  m = (m + n) + (-n) *)
+    replace m with ((m + n) + (-n))%Z at 2 by ring;
+    rewrite (twopower_sum (m + n) (-n)); [ | auto with zarith | auto with zarith];
+    rewrite inject_Z_mult; field;
+    try split; apply inject_twopower_nonzero; auto with zarith.
+
+    (* m + n negative, m and n nonnegative.  Not possible. *)
+    absurd (m + n < 0)%Z; auto with zarith.
+
+    (* m, n and m + n all nonnegative.  m + n = m + n. *)
+    rewrite twopower_sum; [ | auto with zarith | auto with zarith];
+    rewrite inject_Z_mult; field;
+    try split; apply inject_twopower_nonzero; auto with zarith.
 Qed.
 
 Lemma twopower_div_Q : forall (m n : Z),
@@ -240,3 +243,21 @@ replace m with (m - n + n)%Z at 1 by auto with zarith.
 remember (m - n)%Z as p.
 apply twopower_sum_Q.
 Qed.
+
+Lemma twopower_Q_monotonic :
+  forall m n : Z, (m <= n)%Z -> twopower_Q m <= twopower_Q n.
+Proof.
+  intros m n m_le_n.
+  assert (exists k:Z, 0 <= m + k  /\  0 <= n + k)%Z.
+  destruct (Z_lt_le_dec m n); [exists (-m)%Z | exists (-n)%Z]; split;
+  auto with zarith.
+  destruct H.
+  apply Qmult_le_r with (z := twopower_Q x). apply twopower_positive_Q.
+  rewrite <- ?twopower_sum_Q.
+  rewrite ?twopower_Z_Q_compat; [ | auto with zarith | auto with zarith].
+  rewrite <- Zle_Qle.
+  apply twopower_monotonic.
+  auto with zarith.
+Qed.
+
+

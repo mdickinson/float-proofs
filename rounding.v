@@ -91,16 +91,13 @@ Proof.
       replace (inject_Z 0) with 0 by reflexivity.
       unfold scaled_x.
       setoid_replace 0 with (0 * x) by ring.
-      SearchAbout (_ * _ <= _ * _).
       apply Qmult_le_r. assumption.
       assert (0 < twopower_Q scale) by apply twopower_positive_Q.
       auto with qarith.
 
     rewrite Z.abs_eq.
     apply floor_spec_lt.
-    unfold inject_Z.
-    rewrite <- twopower_Z_Q.
-
+    rewrite <- twopower_Z_Q_compat.
     apply scaled_x_bound.
     auto with zarith. assumption.
     unfold round_down_pos. ring.
