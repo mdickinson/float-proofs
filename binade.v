@@ -153,81 +153,26 @@ Qed.
 
 Lemma twopower_binade_Q_unit : forall m : Z,
   m = binade_Q (twopower_Q m).
-
 Proof.
   intro m. unfold binade_Q.
   remember ((binade_Z (Qnum (twopower_Q m)) -
              binade_Z (' Qden (twopower_Q m))))%Z as shift.
+  cut (shift = m).
+    (* completion of proof assuming shift = m *)
+    intro; rewrite H; clear H.
+    destruct (Qlt_le_dec (twopower_Q m) (twopower_Q m)).
+    absurd (twopower_Q m < twopower_Q m); auto with qarith.
+    reflexivity.
+
+  rewrite Heqshift; clear Heqshift shift.
   unfold twopower_Q.
   destruct (Z_lt_le_dec m 0).
-    (* Case m < 0. *)
-    assert (Qnum (twopower_Q m) = 1)%Z.
-      unfold twopower_Q.
-      destruct (Z_lt_le_dec m 0).
-      apply Qnum_inverse. apply twopower_positive. auto with zarith.
-      absurd (m < 0)%Z; auto with zarith.
-    assert (' Qden (twopower_Q m) = (twopower_Z (-m)))%Z.
-      unfold twopower_Q.
-      destruct (Z_lt_le_dec m 0).
-      apply Qden_inverse. apply twopower_positive. auto with zarith.
-      absurd (m < 0)%Z; auto with zarith.
-    assert (binade_Z (Qnum (twopower_Q m)) = 0)%Z.
-      rewrite H. reflexivity.
-    assert (binade_Z (' Qden (twopower_Q m)) = -m)%Z.
-      rewrite H0.
-      symmetry.
-      apply twopower_binade_unit. auto with zarith.
-    assert (shift = m).
-      rewrite Heqshift. rewrite H1. rewrite H2. auto with zarith.
-      rewrite H3.
-      destruct (Z_lt_le_dec m 0).
-      generalize (/ inject_Z (twopower_Z (-m))). intro q.
-      destruct (Qlt_le_dec q q).
-      absurd (q < q); auto with qarith. reflexivity.
-      absurd (m < 0)%Z; auto with zarith.
-
-    (* Case m >= 0. *)
-    assert (Qnum (twopower_Q m) = twopower_Z m).
-      unfold twopower_Q.
-      destruct (Z_lt_le_dec m 0).
-      absurd (m < 0)%Z; auto with zarith.
-      reflexivity.
-    assert (' Qden (twopower_Q m) = 1)%Z.
-      unfold twopower_Q.
-      destruct (Z_lt_le_dec m 0).
-      absurd (m < 0)%Z; auto with zarith.
-      reflexivity.
-    assert (binade_Z (Qnum (twopower_Q m)) = m)%Z.
-      rewrite H.
-      symmetry.
-      apply twopower_binade_unit.
-      auto with zarith.
-    assert (binade_Z (' Qden (twopower_Q m)) = 0)%Z.
-      rewrite H0. reflexivity.
-    assert (shift = m).
-      rewrite Heqshift. rewrite H1. rewrite H2. auto with zarith.
-    rewrite H3.
-    destruct (Z_lt_le_dec m 0).
-    absurd (m < 0)%Z; auto with zarith.
-    generalize (inject_Z (twopower_Z m)). intro q.
-    destruct (Qlt_le_dec q q).
-    absurd (q < q); auto with qarith.
-    reflexivity.
-Qed.  
-
-
-Lemma Q_inv_lt : forall a b : Q,
-  0 < a -> a < b -> / b < / a.
-Proof.
-intros.
-apply Qlt_shift_inv_l. assumption.
-rewrite <- (Qmult_inv_r b).
-rewrite Qmult_comm.
-apply Qmult_lt_r.
-apply Qinv_lt_0_compat.
-apply Qlt_trans with (y := a); assumption. assumption.
-assert (0 < b). apply Qlt_trans with (y := a); assumption.
-auto with qarith.
+    (* m < 0 *)
+    rewrite Qnum_inverse; [ | apply twopower_positive; auto with zarith].
+    rewrite Qden_inverse; [ | apply twopower_positive; auto with zarith].
+    simpl; rewrite <- twopower_binade_unit; auto with zarith.
+    (* 0 <= m *)
+    simpl; rewrite <- twopower_binade_unit; auto with zarith.
 Qed.
 
 
