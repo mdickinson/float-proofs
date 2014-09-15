@@ -176,212 +176,118 @@ Proof.
 Qed.
 
 
-Lemma Q_inv_le : forall a b : Q,
-  0 < a -> a <= b -> /b <= /a.
-Proof.
-intros a b a_positive a_le_b.
-assert (0 < b) as b_positive. apply Qlt_le_trans with (y := a); assumption.
-apply Qmult_le_l with (z := a * b).
-assert (0 == a * 0).
-field.
-rewrite H.
-apply Qmult_lt_l. assumption. assumption.
-assert (a * b * /b == a). field. auto with qarith.
-rewrite H.
-assert (a * b * /a == b). field. auto with qarith.
-rewrite H0.
-assumption.
-Qed.
-
-
-Lemma Q_le_quotient_1 : forall a b c : Q,
-  0 < c -> a <= b -> a / c <= b / c.
-Proof.
-intros a b c c_positive a_le_b.
-unfold Qdiv.
-apply Qmult_le_r.
-apply Qinv_lt_0_compat. assumption. assumption.
-Qed.
-
-
 Lemma Q_le_quotient : forall a b c d : Q,
   0 < a -> 0 < c -> a <= b -> c <= d -> a / d <= b / c.
 Proof.
-intros a b c d a_positive c_positive a_le_b c_le_d.
-assert (0 < b) as b_positive.
-apply Qlt_le_trans with (y := a); assumption.
-assert (0 < d) as d_positive.
-apply Qlt_le_trans with (y := c); assumption.
-apply Qle_trans with (y := b / d).
-apply Q_le_quotient_1; assumption.
+  intros a b c d a_positive c_positive a_le_b c_le_d.
+  assert (0 < d) by (apply Qlt_le_trans with (y := c); assumption).
+  apply Qmult_le_r with (z := c * d).
+  setoid_replace 0 with (0 * d) by ring; apply Qmult_lt_r; assumption.
+  setoid_replace (a / d * (c * d)) with (a * c) by field;
+    [ | auto with qarith].
+  setoid_replace (b / c * (c * d)) with (b * d) by field;
+    [ | auto with qarith].
+  apply Qle_trans with (y := a * d).
+  apply Qmult_le_l; assumption.
+  apply Qmult_le_r; assumption.
+Qed.
 
-unfold Qdiv.
-apply Qmult_le_l. assumption.
-apply Q_inv_le. assumption. assumption.
+
+Lemma Q_lt_quotient : forall a b c d : Q,
+  0 < a -> 0 < c -> a < b -> c <= d -> a / d < b / c.
+Proof.
+  intros a b c d a_positive c_positive a_lt_b c_le_d.
+  assert (0 < d) by (apply Qlt_le_trans with (y := c); assumption).
+  apply Qmult_lt_r with (z := c * d).
+  setoid_replace 0 with (0 * d) by ring; apply Qmult_lt_r; assumption.
+  setoid_replace (a / d * (c * d)) with (a * c) by field;
+    [ | auto with qarith].
+  setoid_replace (b / c * (c * d)) with (b * d) by field;
+    [ | auto with qarith].
+  apply Qle_lt_trans with (y := a * d).
+  apply Qmult_le_l; assumption.
+  apply Qmult_lt_r; assumption.
 Qed.
 
 
 Lemma twopower_binade_Q_counit : forall x : Q, 0 < x ->
   twopower_Q (binade_Q x) <= x.
 Proof.
-unfold binade_Q.
-intro x. intro x_positive.
-remember (binade_Z (Qnum x) - binade_Z ('Qden x))%Z as shift.
-destruct (Qlt_le_dec _ _).
-
-(* Now we have to show that twopower_Q (shift - 1) <= x.  This should follow from:
-
-   twopower_Q (binade_Z (Qnum x)) <= Qnum x
-
-and
-
-   ' Qden x < twopower_Z (binade_Z (' Qden x) + 1)
-
-along with properties of twopower_Q.  The latter property should follow
-from the adjunction: we're proving that
-
-*)
-
-clear q.
-
-assert (twopower_Z (binade_Z (Qnum x)) <= Qnum x)%Z.
-apply twopower_binade_counit.
-revert x_positive. unfold Qlt. simpl. auto with zarith.
-
-assert (' Qden x < twopower_Z (binade_Z (' Qden x) + 1))%Z.
-apply twopower_binade_counit2. auto with zarith.
-assert (' Qden x <= twopower_Z (binade_Z (' Qden x) + 1))%Z.
-auto with zarith. clear H0.
-
-assert (twopower_Q (binade_Z (Qnum x)) <= Qnum x # 1).
-rewrite twopower_Z_Q_compat.
-unfold Qle. simpl.
-rewrite ?Z.mul_1_r. trivial.
-apply binade_nonnegative.
-
-assert (' Qden x # 1 <= twopower_Q (binade_Z (' Qden x) + 1)).
-rewrite twopower_Z_Q_compat.
-unfold Qle. simpl (Qden (_ # 1)).
-rewrite ?Z.mul_1_r.
-apply H1. assert (0 <= binade_Z (' Qden x))%Z by apply binade_nonnegative. omega.
-
-clear H H1.
-
-assert (
-   twopower_Q (binade_Z (Qnum x)) / twopower_Q (binade_Z (' Qden x) + 1) <=
-   (Qnum x # 1) / ('Qden x # 1)).
-apply Q_le_quotient.
-apply twopower_positive_Q.
-
-auto with qarith.
-
-assumption.
-assumption.
-
-assert (x == (Qnum x # 1) / (' Qden x # 1)).
-unfold Qdiv. unfold Qinv. simpl. unfold Qmult. simpl.
-assert ((Qnum x * 1)%Z = Qnum x) by auto with zarith.
-rewrite H1. unfold Qeq. simpl. reflexivity.
-rewrite H1.
-assert (shift - 1 = binade_Z (Qnum x) - (binade_Z (' Qden x) + 1))%Z.
-rewrite Heqshift. ring. rewrite H3.
-assert (
-  twopower_Q (binade_Z (Qnum x) - (binade_Z (' Qden x) + 1)) ==
-  twopower_Q (binade_Z (Qnum x)) / twopower_Q (binade_Z ('Qden x) + 1)).
-symmetry.
-apply twopower_div_Q. rewrite H4.
-assumption.
-
-assumption.
+  unfold binade_Q.
+  intros x x_positive.
+  remember (binade_Z (Qnum x) - binade_Z ('Qden x))%Z as shift.
+  destruct (Qlt_le_dec _ _).
+    (* case x < twopower_Q shift *)
+    setoid_replace x with (inject_Z (Qnum x) / inject_Z (' Qden x))
+      by (apply Qmake_Qdiv).
+    setoid_replace (twopower_Q (shift - 1)) with
+      (twopower_Q (binade_Z (Qnum x)) / twopower_Q (binade_Z (' Qden x) + 1)).
+    apply Q_le_quotient. apply twopower_positive_Q. replace 0 with (inject_Z 0) by reflexivity. rewrite <- Zlt_Qlt. auto with zarith.
+      (* proof that twopower_Q (binade_Z (Qnum x)) <= inject_Z (Qnum x) *)
+      rewrite twopower_Z_Q_compat.
+      rewrite <- Zle_Qle. apply twopower_binade_counit.
+      revert x_positive; unfold Qlt; auto with zarith.
+      simpl. auto with zarith.
+      apply binade_nonnegative.
+      (* proof that inject_Z (' Qden x) <= twopower_Q (binade_Z (' Qden x) + 1) *)
+      rewrite twopower_Z_Q_compat.
+      rewrite <- Zle_Qle.
+      apply Z.lt_le_incl.
+      apply twopower_binade_counit2.
+      auto with zarith.
+      apply Zle_trans with (m := binade_Z (' Qden x)).
+      apply binade_nonnegative. auto with zarith.
+   (* Now make good on the second setoid_replace above. *)
+   rewrite twopower_div_Q.
+   rewrite Heqshift.
+   replace (binade_Z (Qnum x) - binade_Z (' Qden x) - 1)%Z with
+           (binade_Z (Qnum x) - (binade_Z (' Qden x) + 1))%Z by ring.
+   reflexivity. assumption.
 Qed.
-
 
 Arguments twopower_Q _ : simpl never.
-
-
-Lemma remove_denominator_lt : forall (p : positive) (m n : Z),
-  (m < n)%Z <-> m # p < n # p.
-Proof.
-intros p m n. unfold Qlt. simpl.
-apply Z.mul_lt_mono_pos_r. auto with zarith.
-Qed.
-
-Lemma remove_denominator_le : forall (p : positive) (m n : Z),
-  (m <= n)%Z  <->  m # p <= n # p.
-Proof.
-intros p m n. unfold Qle. simpl.
-apply Z.mul_le_mono_pos_r. auto with zarith.
-Qed.
-
 
 Lemma twopower_binade_Q_counit2 : forall x : Q, 0 < x ->
   x < twopower_Q (binade_Q x + 1).
 Proof.
-intros x x_positive.
-unfold binade_Q.
-remember (binade_Z (Qnum x) - binade_Z ('Qden x))%Z as shift.
-destruct (Qlt_le_dec x (twopower_Q shift)).
-
-replace (shift - 1 + 1)%Z with shift by auto with zarith. assumption.
-
-assert (Qnum x # 1 < twopower_Q (binade_Z (Qnum x) + 1)).
-rewrite twopower_Z_Q_compat.
-apply remove_denominator_lt.
-apply twopower_binade_counit2.
-revert x_positive. unfold Qlt. simpl. rewrite ?Z.mul_1_r. trivial.
-assert (0 <= binade_Z (Qnum x))%Z. apply binade_nonnegative. auto with zarith.
-
-assert (twopower_Q (binade_Z (' Qden x)%Z) <= 'Qden x # 1).
-rewrite twopower_Z_Q_compat.
-apply remove_denominator_le.
-apply twopower_binade_counit.
-auto with zarith.
-apply binade_nonnegative.
-
-assert (x == (Qnum x # 1) / (' Qden x # 1)) as expand_x.
-unfold Qdiv. unfold Qinv. simpl. unfold Qmult. simpl.
-rewrite Z.mul_1_r. reflexivity.
-rewrite expand_x.
-
-assert (
-  twopower_Q (shift + 1) == twopower_Q (binade_Z (Qnum x) + 1) /
-                            twopower_Q (binade_Z ('Qden x))).
-assert (shift + 1 = binade_Z (Qnum x) + 1 - binade_Z ('Qden x))%Z.
-rewrite Heqshift. ring.
-rewrite H1. 
-
-symmetry.
-apply twopower_div_Q.
-rewrite H1.
-
-clear shift Heqshift q H1.
-assert (0 < Qnum x # 1).
-revert x_positive. auto with qarith.
-assert (0 < ' Qden x # 1). auto with qarith.
-assert (0 < twopower_Q (binade_Z (Qnum x) + 1)).
-apply twopower_positive_Q.
-assert (0 < twopower_Q (binade_Z (' Qden x))).
-apply twopower_positive_Q.
-
-remember (Qnum x # 1) as a.
-remember ('Qden x # 1) as b.
-remember (twopower_Q (binade_Z (Qnum x) + 1)) as c.
-remember (twopower_Q (binade_Z (' Qden x))) as d.
-clear Heqa Heqb Heqc Heqd.
-
-clear x x_positive expand_x.
-
-apply Qmult_lt_l with (z := b * d).
-
-setoid_replace 0 with (0 * d) by ring.
-apply Qmult_lt_r. assumption. assumption.
-setoid_replace (b * d * (a / b)) with (d * a) by field.
-setoid_replace (b * d * (c / d)) with (b * c) by field.
-
-apply Qle_lt_trans with (y := b*a).
-apply Qmult_le_r. assumption. assumption.
-apply Qmult_lt_l. assumption. assumption.
-auto with qarith. auto with qarith.
+  unfold binade_Q.
+  intros x x_positive.
+  remember (binade_Z (Qnum x) - binade_Z ('Qden x))%Z as shift.
+  destruct (Qlt_le_dec _ _).
+  (* case x < twopower_Q shift is disposed of easily. *)
+  replace (shift - 1 + 1)%Z with shift by ring. assumption.
+  (* case twopower_Q shift <= x *)
+  setoid_replace x with (inject_Z (Qnum x) / inject_Z (' Qden x))
+    by (apply Qmake_Qdiv).
+  setoid_replace (twopower_Q (shift + 1)) with
+    (twopower_Q (binade_Z (Qnum x) + 1) / twopower_Q (binade_Z (' Qden x))).
+  apply Q_lt_quotient.
+  replace 0 with (inject_Z 0) by reflexivity; rewrite <- Zlt_Qlt.
+  revert x_positive; unfold Qlt; auto with zarith.
+  simpl. auto with zarith.
+  rewrite twopower_Z_Q_compat.
+  replace 0 with (inject_Z 0) by reflexivity; rewrite <- Zlt_Qlt.
+  apply twopower_positive.
+  apply binade_nonnegative.
+  apply binade_nonnegative.
+  rewrite twopower_Z_Q_compat.
+  rewrite <- Zlt_Qlt.
+  apply twopower_binade_counit2.
+  revert x_positive; unfold Qlt; auto with zarith.
+  simpl. auto with zarith.
+  apply Zle_trans with (m := binade_Z (Qnum x)).
+  apply binade_nonnegative.
+  auto with zarith.
+  rewrite twopower_Z_Q_compat.
+  rewrite <- Zle_Qle.
+  apply twopower_binade_counit.
+  revert x_positive; auto with zarith.
+  apply binade_nonnegative.
+  rewrite Heqshift.
+  rewrite twopower_div_Q.
+  replace (binade_Z (Qnum x) - binade_Z (' Qden x) + 1)%Z with
+          (binade_Z (Qnum x) + 1 - binade_Z (' Qden x))%Z by ring.
+  reflexivity.
 Qed.
 
 (* The above two lemmas serve to specify binade fully. *)
@@ -442,6 +348,28 @@ split.
   apply Qle_trans with (y := twopower_Q (binade_Q x)).
     apply twopower_Q_monotonic. assumption.
     apply twopower_binade_Q_counit. assumption.
+Qed.
+
+Lemma binade_well_defined :
+  forall x y : Q, 0 < x ->
+  (x == y) -> (binade_Q x = binade_Q y).
+Proof.
+  intros x y x_positive x_eq_y.
+  assert (0 < y) as y_positive by (rewrite <- x_eq_y; assumption).
+
+  assert (binade_Q x <= binade_Q y)%Z.
+  apply twopower_Q_binade_adjunction. assumption.
+  rewrite <- x_eq_y.
+  apply twopower_Q_binade_adjunction. assumption.
+  auto with zarith.
+
+  assert (binade_Q y <= binade_Q x)%Z.
+  apply twopower_Q_binade_adjunction.  assumption.
+  rewrite x_eq_y.
+  apply twopower_Q_binade_adjunction.  assumption.
+  auto with zarith.
+
+  auto with zarith.
 Qed.
 
 
