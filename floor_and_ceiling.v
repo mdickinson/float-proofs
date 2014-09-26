@@ -198,125 +198,109 @@ Proof.
 Qed.
 
 
+Lemma le_not_eq : forall a b : Q, a <= b -> ~(a == b) -> a < b.
+Proof.
+  intros a b H H0; apply Qnot_le_lt; intro; apply H0; now apply Qle_antisym.
+Qed.
+
+
 Lemma floor_ceiling_gap : forall q : Q,
   ~(is_integer q) -> (ceiling q = floor q + 1)%Z.
 Proof.
   intros q q_not_integer.
-  assert (ceiling q <= floor q + 1)%Z by (apply floor_ceiling_bound).
   assert (floor q < ceiling q)%Z.
   apply ceiling_spec_lt.
-
-  (* It should be enough to show that inject_Z (floor q) <= q. *)
-  assert (inject_Z (floor q) <= q) by (apply floor_spec; auto with zarith).
-  assert (~(inject_Z (floor q) == q)) by (intro; apply q_not_integer; apply floor_integer; assumption).
-  auto with qarith.
-
-  auto with zarith.
+  apply le_not_eq.
+    apply floor_spec; apply Z.le_refl.
+    intro; apply q_not_integer; now apply floor_integer.
+  assert (ceiling q <= floor q + 1)%Z by (apply floor_ceiling_bound).
+  omega.
 Qed.
 
+
+Lemma floor_ceiling_gap_Q : forall q : Q,
+  ~is_integer q -> inject_Z (ceiling q) == inject_Z (floor q) + 1.
+Proof.
+  intros. replace 1 with (inject_Z 1) by reflexivity.
+  rewrite <- inject_Z_plus. apply inject_Z_injective.
+  now apply floor_ceiling_gap.
+Qed.
 
 (* Define the round function, which rounds to the nearest integer,
    rounding halfway cases to the nearest even integer. *)
 
 Definition round (q : Q) : Z :=
   let n := floor q in
-  match (Qcompare (q - inject_Z n) (1 # 2)) with
+  match Qcompare (q - inject_Z n) (1 # 2) with
   | Lt => floor q
-  | Eq => if (Zeven_odd_dec n) then (floor q) else (ceiling q)
+  | Eq => if Z.even n then floor q else ceiling q
   | Gt => ceiling q
   end.
 
 
 Add Morphism round : round_morphism.
 Proof.
-  intros x y x_eq_y.
-  unfold round.
-  rewrite x_eq_y.
-  destruct (y - inject_Z (floor y) ?= 1 # 2).
-  destruct (Zeven_odd_dec (floor x)); destruct (Zeven_odd_dec (floor y)).
-  rewrite x_eq_y; reflexivity.
-  absurd (Zeven (floor x)); [rewrite x_eq_y; apply Zodd_not_Zeven | ]; assumption.
-  absurd (Zeven (floor x)); [apply Zodd_not_Zeven | rewrite x_eq_y] ; assumption.
-  rewrite x_eq_y; reflexivity.
-  rewrite x_eq_y; reflexivity.
-  rewrite x_eq_y; reflexivity.
+  intros; unfold round; now rewrite ?H.
 Qed.
+
+Lemma Q_sub_add : forall a b c : Q,
+  a - b == c  ->  a == b + c.
+Proof.
+  intros. apply Qplus_inj_r with (z := -b). rewrite <- H. ring.
+Qed.
+
+
+Lemma tie_floor_ceiling : forall q,
+  q - inject_Z (floor q) == 1 # 2  ->  inject_Z (ceiling q) - q == 1 # 2.
+Proof.
+  intros. rewrite floor_ceiling_gap_Q.
+  setoid_replace (inject_Z (floor q)) with (q - (1 # 2)) by (rewrite <- H; ring); ring.
+  rewrite floor_integer; intro; rewrite H0 in H; now ring_simplify in H.
+Qed.
+
+
+Lemma frac_part_nonnegative : forall q : Q, 0 <= q - inject_Z (floor q).
+Proof.
+  intro;
+  apply Qplus_le_l with (z := inject_Z (floor q)); ring_simplify;
+  apply floor_spec; apply Z.le_refl.
+Qed.
+
+Lemma negfrac_part_nonpositive: forall q : Q, q - inject_Z (ceiling q) <= 0.
+Proof.
+  intro;
+  apply Qplus_le_l with (z := inject_Z (ceiling q)); ring_simplify;
+  apply ceiling_spec; apply Z.le_refl.
+Qed.
+
+Lemma Qneg_le : forall a b, -a < b -> -b < a.
+Proof.
+  intros.
+  apply Qplus_lt_l with (z := b - a).
+  ring_simplify. now ring_simplify in H.
+Qed.
+
 
 Lemma round_error : forall q,
   Qabs (q - inject_Z (round q)) <= 1 # 2.
 Proof.
-  intros.
-  unfold round.
-  case_eq (Qcompare (q - inject_Z (floor q)) (1 # 2)); intro.
-    (* Case of a tie. *)
-    apply Qeq_alt in H.
-    destruct (Zeven_odd_dec (floor q)).
-    rewrite H.
-    simpl. auto with qarith.
-
-    assert (ceiling q = (floor q + 1))%Z.
-    apply floor_ceiling_gap.
-    assert (~ q == inject_Z (floor q)).
+  intros; unfold round.
+  case_eq (q - inject_Z (floor q) ?= 1 # 2).
+    (* First subcase: halfway case. *)
+    intro. apply Qeq_alt in H. case (Z.even (floor q)).
+      rewrite H; now compute.
+      setoid_replace (q - inject_Z (ceiling q)) with
+        (- (inject_Z (ceiling q) - q)) by ring; now rewrite tie_floor_ceiling.
+    (* Second subcase: fractional part < 1 # 2. *)
+    rewrite Qabs_pos by (apply frac_part_nonnegative); rewrite <- Qlt_alt;
+    apply Qlt_le_weak.
+    (* Third subcase: fractional part > 1 # 2. *)
+    rewrite Qabs_neg by (apply negfrac_part_nonpositive); rewrite <- Qgt_alt.
     intro.
-    assert (q - inject_Z (floor q) == 0).
-    rewrite <- H0. ring.
-    revert H1.
-    rewrite H.
-    unfold Qeq. simpl. auto with zarith.
-
-    intro.
-    apply H0.
-    symmetry.
-    apply floor_integer. trivial.
-    assert (inject_Z (ceiling q) - q == 1 # 2).
-    rewrite H0.
-    rewrite inject_Z_plus.
-    revert H.
-    generalize (inject_Z (floor q)).
-    intro. intro.
-    setoid_replace q with (q - q0 + q0) by ring.
-    rewrite H.
-    ring_simplify. reflexivity.
-
-    setoid_replace (q - inject_Z (ceiling q)) with
-                   (-(inject_Z (ceiling q) - q)) by ring.
-    rewrite H1.
-    simpl. auto with qarith.
-
-    (* case q - floor q < 1/2 *)
-    assert (q - inject_Z (floor q) < 1 # 2) by auto with qarith.
-    rewrite Qabs_pos.
-    auto with qarith.
-    assert (inject_Z (floor q) <= q) by (apply floor_spec; auto with zarith).
-    
-    rewrite <- Qplus_le_l with (z := inject_Z (floor q)).
-    ring_simplify. assumption.
-
-    (* case q - floor q > 1/2 *)
-    assert (q - inject_Z (ceiling q) <= 0).
-    rewrite <- Qplus_le_l with (z := inject_Z (ceiling q)).
-    ring_simplify. apply ceiling_spec.  apply Zle_refl.
-    rewrite Qabs_neg.
-    ring_simplify.
-    assert (q - inject_Z (floor q) > 1 # 2).
-    auto with qarith.
-
-    assert (ceiling q = (floor q + 1))%Z.
-    apply floor_ceiling_gap.
-      (* proving that q is not an integer *)
-      assert (~ q == inject_Z (floor q)).
-      intro.
-      revert H1. rewrite <- H2. setoid_replace (q - q) with 0 by ring.
-      unfold Qlt. simpl. auto with zarith.
-      intro. apply H2. symmetry. apply floor_integer. assumption.
-
-    rewrite H2.
-    rewrite inject_Z_plus.
-    clear H0 H2 H.
-
-    rewrite <- Qplus_le_l with (z := q - (1 # 2) - inject_Z (floor q)).
-    ring_simplify.
-    auto with qarith. assumption.
+    setoid_replace (inject_Z (ceiling q)) with (inject_Z (floor q) + 1) by (
+      apply floor_ceiling_gap_Q; rewrite floor_integer; intro; rewrite H0 in H;
+      ring_simplify in H; easy).
+    apply Qlt_le_weak; apply Qneg_le; apply Qplus_lt_l with (z := 1); now ring_simplify.
 Qed.
 
 
@@ -324,170 +308,78 @@ Lemma round_floor_or_ceiling : forall q,
   round q = floor q  \/  round q = ceiling q.
 Proof.
   intro q; unfold round; destruct (Qcompare (q - inject_Z (floor q)) (1 # 2));
-  destruct (Zeven_odd_dec (floor q)); tauto.
+  destruct (Z.even (floor q)); tauto.
 Qed.
 
 
+Lemma Zeven_odd : forall n : Z, Z.even n = false  <->  Z.odd n = true.
+Proof.
+  intro; split; intro.
+  rewrite <- Z.negb_even. rewrite H. easy.
+  rewrite <- Z.negb_odd. rewrite H. easy.
+Qed.
+
+Lemma Znoteven_bool_iff : forall n : Z, Z.even n = false  <->  Zodd n.
+Proof.
+  setoid_rewrite Zeven_odd; apply Zodd_bool_iff.
+Qed.
+  
+Lemma tie_characterization : forall q,
+  Qabs (q - inject_Z (round q)) == 1 # 2  ->  q - inject_Z (floor q) == 1 # 2.
+Proof.
+  intros.
+  (* round q is either floor q or ceiling q. *)
+  destruct (round_floor_or_ceiling q); rewrite H0 in H; clear H0.
+  (* Case 1: round q is floor q.
+     Then q - inject_Z (floor q) is nonnegative. ... *)
+  rewrite <- Qabs_pos. easy.
+  apply Qplus_le_r with (z := inject_Z (floor q)); ring_simplify;
+    apply floor_spec; apply Zle_refl.
+
+  (* Case 2: round q is ceiling q. *)
+  assert (Qabs (q - inject_Z (ceiling q)) == - (q - inject_Z (ceiling q))).
+  apply Qabs_neg. apply Qplus_le_r with (z := inject_Z (ceiling q)).
+    ring_simplify. apply ceiling_spec. apply Zle_refl.
+  rewrite H0 in H.
+
+  assert (inject_Z (ceiling q) == inject_Z (floor q) + 1).
+  apply floor_ceiling_gap_Q.
+  rewrite ceiling_integer.
+  intro. rewrite H1 in H. now ring_simplify in H.
+  rewrite H1 in H. clear H0. clear H1.
+
+  apply Qplus_inj_r with (z := -q + inject_Z (floor q) + (1 # 2)).
+  ring_simplify. now ring_simplify in H.
+Qed.
+
+  
 Lemma round_error_half : forall q,
   let rounded := round q in
   (Qabs (q - inject_Z (rounded)) == 1 # 2) -> Zeven rounded.
 Proof.
-  intro q. intro. unfold rounded. intro H.
+  intros q rounded; unfold rounded; intro; unfold round.
+  case_eq (q - inject_Z (floor q) ?= 1 # 2);
+  [rewrite <- Qeq_alt | rewrite <- Qlt_alt | rewrite <- Qgt_alt]; intro.
+  (* Case 1: halfway case. *)
+  rewrite floor_ceiling_gap.
+  case_eq (Z.even (floor q)); intro.
+    (* Case 1.1. *)
+    now apply Zeven_bool_iff.
+    (* Case 1.2. *)
+    apply Zodd_plus_Zodd; [now apply Znoteven_bool_iff | easy].
+    (* make good on proof that q is not an integer. *)
+    rewrite floor_integer. intro. rewrite H1 in H0.
+    now ring_simplify in H0.
 
-  unfold round.
-  case_eq (Qcompare (q - inject_Z (floor q)) (1 # 2)); intro.
-
-    (* Subgoal 1: case where fractional part is exactly 1 # 2.
-       (The other two cases should give contradictions. *)
-    assert (ceiling q = floor q + 1)%Z.
-      apply floor_ceiling_gap.
-      assert (~(q == inject_Z (floor q))).
-        intro.
-        revert H0.
-        rewrite <- H1.
-        setoid_replace (q - q) with 0 by ring.
-        unfold Qcompare. simpl. discriminate.
-      intro. apply H1. symmetry. apply floor_integer. assumption.
-    rewrite H1.   
-    generalize (floor q). clear q rounded H H0 H1.
-    intros. destruct (Zeven_odd_dec z). assumption.
-    apply Zeven_Sn. assumption.
-
-    (* Subgoal 2: frac part < 1 / 2.  Show that this is inconsistent
-       with Qabs (q - inject_Z (round q)) == 1 / 2. *)
-    pose proof (round_floor_or_ceiling q).
-    elim H1.
-
-    intro.
-    revert H.
-    rewrite H2.
-    assert (0 <= q - inject_Z (floor q)).
-    apply Qplus_le_l with (z := inject_Z (floor q)).
-    ring_simplify. apply floor_spec. apply Zle_refl.
-
-    rewrite Qabs_pos by apply H.
-    intro.
-    absurd (q - inject_Z (floor q) == 1 # 2); auto with qarith.
-
-    intro.
-    rewrite H2 in H.
-    rewrite Qabs_neg in H.
-    absurd (q - inject_Z (floor q) == 1 # 2).
+  (* Case 2 *)
+  absurd (q - inject_Z (floor q) == 1 # 2).
     auto with qarith.
-    
-    assert (q == inject_Z (ceiling q) - (1 # 2)) by (rewrite <- H; ring).
-    rewrite H3 at 1.
-    apply Qplus_inj_r with (z := 1 # 2).
-    ring_simplify.
-    replace 1 with (inject_Z 1) by reflexivity.
-    rewrite <- inject_Z_opp.
-    rewrite <- inject_Z_plus.
-    apply inject_Z_injective.
-    apply Z.add_cancel_l with (p := floor q).
-    ring_simplify.
-    apply floor_ceiling_gap.
+    now apply tie_characterization.
 
-    (* Now we have to show that q is not an integer *)
-    clear H0 H1 H2 H3 rounded.
-    intro.
-    assert (q == inject_Z (floor q)).
-      symmetry.
-      apply floor_integer.
-      assumption.
-    revert H.    
-    rewrite H1 at 1.
-    generalize (floor q).
-    generalize (ceiling q).
-    intros.
-    clear q H0 H1.
-    assert (- (inject_Z z0 - inject_Z z) == inject_Z (z - z0)).
-    unfold Z.sub.
-    rewrite inject_Z_plus.
-    rewrite inject_Z_opp.
-    ring.
-    rewrite H0 in H.
-    revert H.
-    clear H0.
-    generalize (z - z0)%Z.
-    intros. clear z z0.
-    revert H.
-    unfold Qeq. simpl.
-
-    (* Current goal is:  z1 * 2 = 1 -> False *)
-    intro.    
-    assert ((z1 * 2) mod 2 = 1 mod 2).
-    apply f_equal2. assumption. trivial.
-    assert ((z1 * 2) mod 2 = ((z1 mod 2) * (2 mod 2)) mod 2)%Z by (apply Zmult_mod).
-    rewrite H1 in H0.
-    revert H0.
-    assert (2 mod 2 = 0)%Z.
-    compute. reflexivity.
-    rewrite H0.
-    ring_simplify (z1 mod 2 * 0)%Z.
-    compute.
-    discriminate.
-
-    assert (q <= inject_Z (ceiling q)).
-    apply ceiling_spec. auto with zarith.
-    apply Qplus_le_l with (z := inject_Z (ceiling q)).
-    ring_simplify. assumption.
-
-  (* Subgoal 3: here we're assuming that q mod 1 is > 1 / 2.
-     Again, this should be inconsistent with the assumption
-     that q - inject_Z (round q) == 1 / 2. *) 
-
-  cut ((q - inject_Z (floor q) ?= 1 # 2) = Eq).
-  rewrite H0. discriminate.
-  apply Qeq_alt.
-  pose proof (round_floor_or_ceiling q).
-  elim H1; intro.
-
-  rewrite H2 in H.
-  assert (0 <= q - inject_Z (floor q)).
-    apply Qplus_le_l with (z := inject_Z (floor q)). ring_simplify.
-    apply floor_spec. auto with zarith.
-  revert H. rewrite Qabs_pos. trivial. assumption.
-
-  rewrite H2 in H.
-  assert (q - inject_Z (ceiling q) <= 0).
-    apply Qplus_le_l with (z := inject_Z (ceiling q)). ring_simplify.
-    apply ceiling_spec. auto with zarith.
-  revert H. rewrite Qabs_neg. intro.
-
-  (* Clear out the irrelevant stuff. *)
-  clear rounded H0 H1 H2 H3.
-
-  (* Left with showing the following:
-  q : Q
-  H : - (q - inject_Z (ceiling q)) == 1 # 2
-  ============================
-   q - inject_Z (floor q) == 1 # 2
-  *)
-
-  assert (~ is_integer q). intro.
-  assert (inject_Z (ceiling q) == q) by (apply ceiling_integer; assumption).
-  rewrite H1 in H.
-  ring_simplify in H.
-  revert H. compute. discriminate.
-
-  assert (ceiling q = floor q + 1)%Z by (apply floor_ceiling_gap; assumption).
-  rewrite H1 in H.
-  clear H0 H1.
-
-  rewrite inject_Z_plus in H.
-  replace (inject_Z 1) with 1 in H by reflexivity.
-  assert (-(q - inject_Z (floor q)) == -(1 # 2)).
-  ring_simplify in H.
-  ring_simplify.
-  apply Qplus_inj_r with (z := 1).
-  ring_simplify. assumption.
-
-  rewrite <- Qopp_involutive at 1.
-  rewrite H0.  apply Qopp_involutive.
-
-  apply Qplus_le_r with (z := inject_Z (ceiling q)).
-  ring_simplify.
-  apply ceiling_spec. auto with zarith.
+  (* Case 3 *)
+  absurd (q - inject_Z (floor q) == 1 # 2).
+    auto with qarith.
+    now apply tie_characterization.
 Qed.
 
 
