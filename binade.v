@@ -82,7 +82,6 @@ intuition. omega.
 Qed.
 
 
-
 Open Scope Q.
 
 (* Definition of binade for rationals.
@@ -349,6 +348,19 @@ split.
     apply twopower_Q_monotonic. assumption.
     apply twopower_binade_Q_counit. assumption.
 Qed.
+
+
+Lemma twopower_Q_binade_adjunction_lt :
+  forall (x : Q) (n : Z), 0 < x ->
+  (x < twopower_Q n  <->  (binade_Q x < n)%Z).
+Proof.
+  intros x n x_positive.
+  pose proof (twopower_Q_binade_adjunction x n x_positive).
+  assert (x < twopower_Q n  <->  ~(twopower_Q n <= x)) by (split; auto with qarith).
+  assert (binade_Q x < n  <->  ~(n <= binade_Q x))%Z by (split; auto with zarith).
+  tauto.
+Qed.
+
 
 Lemma binade_well_defined :
   forall x y : Q, 0 < x ->
