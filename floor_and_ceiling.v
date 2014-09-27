@@ -7,6 +7,11 @@ Require Import Qabs.
 
 Open Scope Z.
 
+Lemma negate_iff : forall P Q, (P <-> Q)  ->  (~P <-> ~Q).
+Proof.
+  tauto. 
+Qed.
+
 Lemma floor_spec_Z : forall a b n,
   (0 < b) -> (n * b <= a  <->  n <= a / b).
 Proof.
@@ -23,7 +28,7 @@ Proof.
   intros a b n b_positive.
   setoid_replace (a < n * b) with (~ n * b <= a) by (split; auto with zarith).
   setoid_replace (a / b < n) with (~ n <= a / b) by (split; auto with zarith).
-  split; intro; intro; apply H; now apply floor_spec_Z.
+  apply negate_iff. now apply floor_spec_Z.
 Qed.
 
 
@@ -44,12 +49,6 @@ Proof.
   split; intro; apply Z.opp_lt_mono; ring_simplify; assumption.
 Qed.
 
-Lemma negate_iff : forall P Q, (P <-> Q)  ->  (~P <-> ~Q).
-Proof.
-  tauto. 
-Qed.
-
-
 (* Define the floor function, and prove its characteristic property. *)
 Definition floor (x : Q) : Z := (Qnum x / ' Qden x)%Z.
 
@@ -65,7 +64,7 @@ Qed.
 (* It's much easier to prove that "floor" is a setoid morphism
    using "floor_spec" than using the definition directly. *)
 
-Add Morphism floor : Q_floor_morph.
+Add Morphism floor : floor_morphism.
   intros x y x_eq_y; apply Z.le_antisymm; apply floor_spec;
   [ rewrite <- x_eq_y | rewrite x_eq_y ]; apply floor_spec; auto with zarith.
 Qed.
@@ -99,11 +98,20 @@ Proof.
   [apply Zle_refl | apply Qle_refl].
 Qed.
 
+Lemma floor_monotonic : forall q r : Q,
+  q <= r  ->  (floor q <= floor r)%Z.
+Proof.
+  intros q r q_le_r.
+  apply floor_spec.
+  apply Qle_trans with (y := q).
+  apply floor_spec. now apply Zle_refl. assumption.
+Qed.
+
 (* Define the ceiling function, and prove its characteristic property. *)
 
 Definition ceiling (x : Q) : Z := (-floor(-x))%Z.
 
-Add Morphism ceiling : Q_ceiling_morph.
+Add Morphism ceiling : ceiling_morphism.
   intros x y x_eq_y; unfold ceiling; rewrite x_eq_y; reflexivity.
 Qed.
 
@@ -148,6 +156,29 @@ Lemma ceiling_inject : forall n : Z, ceiling (inject_Z n) = n.
 Proof.
   intro n; apply Z.le_antisymm; [ | rewrite Zle_Qle]; apply ceiling_spec;
   [auto with qarith | auto with zarith].
+Qed.
+
+
+Lemma ceiling_monotonic : forall q r : Q,
+  q <= r  ->  (ceiling q <= ceiling r)%Z.
+Proof.
+  intros.
+  apply ceiling_spec.
+  apply Qle_trans with (y := r).
+  easy. apply ceiling_spec. apply Z.le_refl.
+Qed.
+
+
+Lemma neg_ceiling_is_floor_neg : forall q : Q,
+  (- ceiling q)%Z = floor (-q).
+Proof.
+  unfold ceiling. intro. now rewrite Z.opp_involutive.
+Qed.
+
+Lemma neg_floor_is_ceiling_neg : forall q : Q,
+  (- floor q)%Z = ceiling (-q).
+Proof.
+  unfold ceiling. intro. now rewrite Qopp_opp.
 Qed.
 
 
