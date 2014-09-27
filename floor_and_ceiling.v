@@ -17,6 +17,15 @@ Proof.
       now apply Z.mul_div_le.
 Qed.
 
+Lemma floor_spec_Z_lt : forall a b n,
+  (0 < b) -> (a < n * b  <->  a / b < n).
+Proof.
+  intros a b n b_positive.
+  setoid_replace (a < n * b) with (~ n * b <= a) by (split; auto with zarith).
+  setoid_replace (a / b < n) with (~ n <= a / b) by (split; auto with zarith).
+  split; intro; intro; apply H; now apply floor_spec_Z.
+Qed.
+
 
 Open Scope Q.
 
