@@ -1,5 +1,3 @@
-Section floor_and_ceiling.
-
 Require Import ZArith.
 Require Import QArith.
 Require Import Qabs.
@@ -421,6 +419,3 @@ Proof.
     auto with qarith.
     now apply tie_characterization.
 Qed.
-
-
-End floor_and_ceiling.
