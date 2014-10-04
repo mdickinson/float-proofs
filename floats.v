@@ -171,8 +171,6 @@ Variable rounding_method : Q -> Z.
 
 Hypothesis rounding_method_well_defined: forall q r : Q, q == r  -> rounding_method q = rounding_method r.
 
-Print Instances Proper.
-
 (* We assume that our rounding method always rounds to either
    the floor or the ceiling. *)
 
@@ -237,12 +235,9 @@ Proof.
   apply rounding_method_rounds.
   apply ceiling_spec.
   rewrite <- twopower_Z_Q_compat.
-  SearchAbout (_ / _ <= _).
   apply div_mult_le_l. apply twopower_positive_Q.
   rewrite <- twopower_sum_Q.
-  SearchAbout (_ <= twopower_Q _).
   apply Qlt_le_weak.
-  SearchAbout (_ < twopower_Q _).
   unfold exp; unfold exponent_choice.
   destruct_compare (0 ?= q).
   rewrite <- H. apply twopower_positive_Q.
@@ -263,8 +258,6 @@ Definition rounded (q : Q) : float precision
   |}.
 
 End RoundingFromQ.
-
-Check rounded.
 
 Lemma floor_rounds : forall q : Q, (floor q <= floor q <= ceiling q)%Z.
 Proof.
