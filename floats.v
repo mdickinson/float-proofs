@@ -7,6 +7,11 @@ Require Import binade.
 
 (* Auxiliary lemmas about Q. *)
 
+Lemma Q_lt_antisymm : forall q r : Q, q < r -> r < q -> False.
+Proof.
+  intros q r H. apply Qle_not_lt. now apply Qlt_le_weak.
+Qed.
+
 Lemma Q_sign_flip : forall q r : Q, -q <= r  ->  -r <= q.
 Proof.
   intros; apply Qplus_le_r with (z := r - q); now ring_simplify.
@@ -257,6 +262,165 @@ Definition rounded (q : Q) : float precision
     significand_bound := significand_within_bounds q
   |}.
 
+(* Some general lemmas that apply to all rounding modes. *)
+
+Lemma rounding_method_inject : forall n : Z, rounding_method (inject_Z n) = n.
+Proof.
+  intro.  
+  apply Z.le_antisymm.
+  apply Z.le_trans with (m := ceiling (inject_Z n)).
+  apply rounding_method_rounds.
+  rewrite ceiling_inject. apply Z.le_refl.
+  apply Z.le_trans with (m := floor (inject_Z n)).
+  rewrite floor_inject. apply Z.le_refl.
+  apply rounding_method_rounds.
+Qed.
+
+Add Morphism rounding_method : rounding_method_morphism.
+Proof.
+  intros. now apply rounding_method_well_defined.
+Qed.
+
+Lemma rounded_zero : value (rounded 0) == 0.
+Proof.
+  unfold rounded. unfold round_to_exponent. unfold value. simpl.
+  replace (exponent_choice 0) with 0%Z by (now compute).
+  setoid_replace (0 / twopower_Q 0) with 0 by (now compute).
+  replace (rounding_method 0) with 0%Z.
+  now compute.
+  setoid_replace 0 with (inject_Z 0).
+  symmetry. apply rounding_method_inject.
+  now compute.
+Qed.
+
+Lemma Qmul_pos_pos : forall q r, 0 < q -> 0 < r -> 0 < q * r.
+Proof.
+  intros.
+  setoid_replace 0 with (0 * 0) by ring.
+  apply Qle_lt_trans with (y := q * 0).
+  ring_simplify. easy.
+  now apply Qmult_lt_l.
+Qed.
+
+
+Lemma rounded_positive: forall q, 0 < q -> 0 < value (rounded q).
+Proof.
+  intros.
+  unfold value.
+  apply Qmul_pos_pos.
+  setoid_replace 0 with (inject_Z 0) by (now compute).
+  rewrite <- Zlt_Qlt.
+  unfold rounded. simpl.
+  apply Z.lt_le_trans with (m := twopower_Z ('precision - 1)).
+  apply twopower_positive.
+  (* Trivial bit: showing that 0 <= 'precision - 1). *)
+  apply Z.add_le_mono_l with (p := 1%Z).
+  ring_simplify.
+  assert (0 < 'precision)%Z.
+  auto with zarith. omega.
+  (* Done with annoying trivial bit. *)
+  (* Now showing that 2^(precision - 1) <= significand of rounded result. *)
+  unfold round_to_exponent.
+  apply Z.le_trans with (m := floor (q / twopower_Q (exponent_choice q))).
+  apply floor_spec.
+  rewrite <- twopower_Z_Q_compat.
+  apply div_mult_le_r.
+  apply twopower_positive_Q.
+  rewrite <- twopower_sum_Q.
+  apply twopower_Q_binade_adjunction.
+  easy.
+  unfold exponent_choice.
+  destruct_compare (0 ?= q).
+  (* Another annoying piece: we've got an order contradiction.
+     TODO: write a tactic that automatically proves any
+     goal when a < b and a == b are both in the hypotheses. *)
+  exfalso. revert H0. now apply Qlt_not_eq.
+  ring_simplify. auto with zarith.
+  (* Now we've got 0 < q and q < 0 in the hypotheses. *)
+  exfalso. eapply Q_lt_antisymm. exact H. easy.
+  (* Showing that 0 <= 'precision - 1 again. *)
+  apply Z.add_le_mono_l with (p := 1%Z).
+  ring_simplify.
+  assert (0 < 'precision)%Z by (auto with zarith).
+  omega.
+  apply rounding_method_rounds.  
+  apply twopower_positive_Q.
+Qed.
+
+
+
+Lemma Qmul_neg_pos : forall q r, q < 0 -> 0 < r -> q * r < 0.
+Proof.
+  intros.
+  setoid_replace 0 with (0 * 0) by ring.
+  apply Qlt_le_trans with (y := 0 * r).
+  now apply Qmult_lt_r.
+  now compute.
+Qed.
+
+Lemma Q_opp_mult: forall s t : Q, -s * t == - (s * t).
+Proof. intros. ring.
+Qed.
+
+
+
+Lemma rounded_negative : forall q, q < 0  -> value (rounded q) < 0.
+Proof.
+  intros.
+  unfold rounded. unfold value. simpl.
+  apply Qmul_neg_pos; [ | apply twopower_positive_Q].
+  unfold round_to_exponent.
+  replace 0 with (inject_Z 0) by now compute.
+  rewrite <- Zlt_Qlt.
+  apply Z.le_lt_trans with (m := ceiling (q / twopower_Q (exponent_choice q))); [ apply rounding_method_rounds | ].
+  apply Z.le_lt_trans with (m := (-twopower_Z ('precision - 1))%Z).
+  apply ceiling_spec.
+  rewrite inject_Z_opp.
+  rewrite <- twopower_Z_Q_compat.
+  apply div_mult_le_l; [apply twopower_positive_Q | ].
+
+
+  rewrite Q_opp_mult.
+  apply Q_sign_flip_r.
+  rewrite <- twopower_sum_Q.
+  unfold exponent_choice.
+  destruct_compare (0 ?= q).
+  (* Contradiction time again: q < 0 and 0 == q. *)
+  exfalso. symmetry in H0. revert H0. apply Qlt_not_eq. easy.
+  (* And another one: q < 0 and 0 < q. *)
+  exfalso. eapply Q_lt_antisymm. exact H. easy.
+  (* And finally the one we care about: q < 0 and q < 0. *)
+  clear H0.
+  apply twopower_Q_binade_adjunction.
+  apply Q_sign_flip_lt_r. ring_simplify. easy.
+  ring_simplify.  apply Z.le_refl.
+  (* Showing that 0 <= 'precision - 1 *)
+  assert (0 < 'precision)%Z by (auto with zarith); omega.
+  apply Z.opp_neg_pos.
+  apply twopower_positive.
+  assert (0 < 'precision)%Z by (auto with zarith). omega.
+Qed.
+
+
+Hint Immediate twopower_positive_Q.
+
+
+Lemma rounded_le_twopower : forall (n : Z) (q : Q),
+  q <= twopower_Q n  ->  value (rounded q) <= twopower_Q n.
+Proof.
+Abort.
+
+
+
+
+
+
+
+
+
+
+
+
 End RoundingFromQ.
 
 Lemma floor_rounds : forall q : Q, (floor q <= floor q <= ceiling q)%Z.
@@ -333,6 +497,21 @@ Proof.
   apply Z.le_refl.
 Qed.
 
+(* But we should be able to prove more: round_down of a rational
+   should be the *closest* float to the result that doesn't exceed
+   that rational.  We're going to need some preliminary lemmas. *)
 
-  
+(* First some easy ones: rounding never takes us past zero. *)
 
+
+
+
+
+Lemma round_down_spec : forall precision q,
+  forall x : float precision,
+  value x <= q  <->  value x <= value (round_down precision q).
+Proof.
+  intros; split; intro.
+  (* Harder direction: showing that
+     value x <= q implies value x <= value (round_down precision q). *)
+Abort.
