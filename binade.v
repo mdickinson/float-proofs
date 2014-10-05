@@ -3,8 +3,6 @@ Require Import QArith.
 
 Require Import twopower.
 
-Section binade_and_twopower.
-
 Open Scope Z.
 
 Definition binade_Z := Z.log2.
@@ -383,6 +381,3 @@ Proof.
 
   auto with zarith.
 Qed.
-
-
-End binade_and_twopower.
