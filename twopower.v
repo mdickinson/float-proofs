@@ -94,13 +94,6 @@ Defined.
 
 (* Multiplication and division for positive rationals. *)
 
-Definition QPos_div (p q : QPos) : QPos.
-  refine (exist _ (proj1_sig p / proj1_sig q) _);
-  destruct p; destruct q; now apply Q_div_pos_pos.
-Defined.
-
-Infix "/" := QPos_div : QPos_scope.
-
 Lemma QPos_num_positive : forall q : Q, (0 < q)%Q -> (' Z.to_pos (Qnum q) = Qnum q)%Z.
 Proof.
   intros q q_positive; apply Z2Pos.id; revert q_positive;
@@ -116,7 +109,7 @@ Lemma num_over_den : forall q : QPos,
   QPos_from_pos (QPos_num q) / QPos_from_pos (QPos_den q) == q.
 Proof.
   intro q. destruct q.
-  unfold QPos.eq, QPos_div, QPos_num, QPos_den. simpl.
+  unfold QPos.eq, QPos.div, QPos_num, QPos_den. simpl.
   rewrite QPos_num_positive; [ | easy].
   apply Q_as_fraction.
 Qed.
@@ -156,7 +149,7 @@ Add Morphism QPos.mul : QPos_mul_morphism.
   unfold QPos.eq; simpl; intros; rewrite H; now rewrite H0.
 Qed.
 
-Add Morphism QPos_div : QPos_div_morphism.
+Add Morphism QPos.div : QPos_div_morphism.
   unfold QPos.eq; simpl; intros; rewrite H; now rewrite H0.
 Qed.
 
@@ -179,98 +172,50 @@ Proof.
   unfold QPos.eq, twopower; intros; now apply Qpower_plus.
 Qed.
 
-Open Scope Q.
-
-Lemma Q_div_mul_r a b c : 0 < c  ->  (a == b / c <-> a * c == b).
+Lemma QPos_mul_inv_l p : /p * p == 1.
 Proof.
-  intro; split; intro H0; [rewrite H0 | rewrite <- H0]; field; auto with qarith.
+  rewrite QPos.mul_comm. apply QPos.mul_inv_r.
 Qed.
 
-Hint Resolve Qinv_lt_0_compat.
-
-Lemma Q_div_mul_le_r : forall a b c, 0 < c  -> (b / c <= a  <->  b <= a * c).
+Lemma QPos_div_mul b c : b / c * c == b.
 Proof.
-  split. intro H0.
-  apply Qmult_lt_0_le_reg_r with (z := 1 / c).
-  setoid_replace (1 / c) with (/ c) by field. auto. auto with qarith.
-  field_simplify. field_simplify in H0. easy.
-
-  revert H. rewrite H0. easy.
-  auto with qarith.
-  auto with qarith.
-
-  intro.
-  apply Qmult_lt_0_le_reg_r with (z := c). easy.
-  field_simplify. field_simplify in H0.
-  rewrite <- Qmult_comm. easy.
-  auto with qarith.
+  unfold QPos.div.
+  rewrite <- QPos.mul_assoc. rewrite QPos_mul_inv_l.
+  apply QPos.mul_1_r.
 Qed.
 
-Lemma Q_div_mul_le_l : forall a b c, 0 < c  -> (a <= b / c  <->  a * c <= b).
+Lemma QPos_mul_div b c : b * c / c == b.
 Proof.
-  split.
-
-  intro H0.
-  apply Qmult_lt_0_le_reg_r with (z := 1 / c).
-  setoid_replace (1 / c) with (/ c) by field; auto with qarith.
-  field_simplify. field_simplify in H0. easy.
-
-  QOrder.order. QOrder.order. QOrder.order.
-
-  intro H0.
-  apply Qmult_lt_0_le_reg_r with (z := c). easy.
-  field_simplify.
-  field_simplify in H0. easy.
-
-  QOrder.order.
+  unfold QPos.div.
+  rewrite <- QPos.mul_assoc.
+  rewrite QPos.mul_inv_r.
+  apply QPos.mul_1_r.
 Qed.
 
-Lemma Q_div_mul_lt_l : forall a b c, 0 < c -> (a < b / c  <->  a * c < b).
-Proof.
-  split.
-
-  intro H0.
-  apply Qmult_lt_l with (z := 1 / c).
-  setoid_replace (1 / c) with (/ c) by field; auto with qarith.
-  field_simplify. field_simplify in H0. easy.
-
-  QOrder.order.
-  QOrder.order.
-  QOrder.order.
-
-  intro H0.
-  apply Qmult_lt_r with (z := c). easy.
-  field_simplify. field_simplify in H0. easy.
-
-  QOrder.order.
+Lemma QPos_div_mul_r a b c : a == b / c  <->  a * c == b.
+  split; intro; [rewrite H | rewrite <- H].
+  apply QPos_div_mul. symmetry.  apply QPos_mul_div.
 Qed.
 
-
-Hint Immediate Q_div_mul_r.
-Hint Immediate Q_div_mul_le_r.
-Hint Immediate Q_div_mul_le_l.
-Hint Immediate Q_div_mul_lt_l.
-
-Open Scope QPos.
-
-Lemma QPos_div_mul_r : forall a b c, a == b / c  <->  a * c == b.
+Lemma QPos_div_mul_le_r a b c : b / c <= a  <->  b <= a * c.
 Proof.
-  intros; destruct a, b, c; unfold QPos.eq; simpl; auto.
+  rewrite QPos.mul_le_mono_r with (p := c).
+  setoid_replace (b / c * c) with b. easy.
+  apply QPos_div_mul.
 Qed.
 
-Lemma QPos_div_mul_le_r : forall a b c, b / c <= a  <->  b <= a * c.
+Lemma QPos_div_mul_le_l a b c : a <= b / c  <->  a * c <= b.
 Proof.
-  intros; destruct a, b, c; unfold QPos.le; simpl; auto.
+  rewrite QPos.mul_le_mono_r with (p := c).
+  setoid_replace (b / c * c) with b. easy.
+  apply QPos_div_mul.
 Qed.
 
-Lemma QPos_div_mul_le_l : forall a b c, a <= b / c  <->  a * c <= b.
+Lemma QPos_div_mul_lt_l a b c : a < b / c  <->  a * c < b.
 Proof.
-  intros; destruct a, b, c; unfold QPos.le; simpl; auto.
-Qed.
-
-Lemma QPos_div_mul_lt_l : forall a b c, a < b / c  <->  a * c < b.
-Proof.
-  intros; destruct a, b, c; unfold QPos.lt; simpl; auto.
+  rewrite QPos.mul_lt_mono_r with (p := c).
+  setoid_replace (b / c * c) with b. easy.
+  apply QPos_div_mul.
 Qed.
 
 Lemma twopower_div : forall p q : Z, twopower (p - q) == (twopower p) / (twopower q).

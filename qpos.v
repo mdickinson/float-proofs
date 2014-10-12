@@ -168,6 +168,25 @@ Proof.
   split; apply Qmult_lt_r; now destruct p.
 Qed.
 
+(* Reciprocal. *)
+
+Definition inv (p : t) : t.
+  refine (exist _ (/ !p)%Q _); apply Qinv_lt_0_compat; now destruct p.
+Defined.
+
+Notation "/ x" := (inv x).
+
+Lemma mul_inv_r p : p * /p == 1.
+Proof.
+  apply Qmult_inv_r; destruct p; simpl; QOrder.order.
+Qed.
+
+(* Division. *)
+
+Definition div (p q : t) : t := p * /q.
+
+Infix "/" := div : QPos_scope.
+
 End QPos.
 
 (* Re-export notations. *)
@@ -185,6 +204,8 @@ Infix "<=?" := QPos.leb (at level 70, no associativity) : QPos_scope.
 Infix "<?" := QPos.ltb (at level 70, no associativity) : QPos_scope.
 
 Infix "*" := QPos.mul : QPos_scope.
+Infix "/" := QPos.div : QPos_scope.
+Notation "/ p" := (QPos.inv p) : QPos_scope.
 
 Notation "1" := QPos.one : QPos_scope.
 Notation "2" := QPos.two : QPos_scope.
