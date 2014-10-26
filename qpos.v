@@ -14,7 +14,7 @@ Proof.
 Qed.
 
 
-Definition QPos := { x : Q | (0 < x) }.
+Definition QPos := { x : Q | 0 < x }.
 
 Delimit Scope QPos_scope with QPos.
 
@@ -83,13 +83,6 @@ Lemma ltb_lt p q : (p <? q) = true <-> p < q.
 Proof.
   unfold ltb, lt, compare; rewrite Qlt_alt; case (!p ?= !q)%Q; split; easy.
 Qed.
-
-(*
-  p : t
-  q : t
-  ============================
-   Gt <> Gt -> false = true
-*)
 
 Lemma leb_le p q : (p <=? q) = true <-> p <= q.
 Proof.
@@ -187,6 +180,20 @@ Definition div (p q : t) : t := p * /q.
 
 Infix "/" := div : QPos_scope.
 
+(* QPos and the positive type. *)
+
+Definition from_pos (m : positive) : t.
+  refine (exist _ (inject_Z (' m)) _); apply Pos2Z.is_pos.
+Defined.
+
+Lemma as_fraction (p : t) :
+  exists (m n : positive), p == (from_pos m) / (from_pos n).
+Proof.
+  destruct p; exists (Z.to_pos (Qnum x)), (Qden x); unfold eq; simpl; rewrite Z2Pos.id.
+  unfold Qeq; simpl; ring.
+  unfold Qlt in q; simpl in q; ring_simplify in q; easy.
+Qed.
+
 End QPos.
 
 (* Re-export notations. *)
@@ -208,5 +215,5 @@ Infix "/" := QPos.div : QPos_scope.
 Notation "/ p" := (QPos.inv p) : QPos_scope.
 
 Notation "1" := QPos.one : QPos_scope.
-Notation "2" := QPos.two : QPos_scope.
+Notation "2" := QPos.two : QPos_scope. 
 

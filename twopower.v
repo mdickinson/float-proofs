@@ -94,15 +94,15 @@ Defined.
 
 (* Multiplication and division for positive rationals. *)
 
-Lemma QPos_num_positive : forall q : Q, (0 < q)%Q -> (' Z.to_pos (Qnum q) = Qnum q)%Z.
+Lemma QPos_num_positive (q : Q) : (0 < q)%Q -> ('Z.to_pos (Qnum q) = Qnum q)%Z.
 Proof.
-  intros q q_positive; apply Z2Pos.id; revert q_positive;
+  intros q_positive; apply Z2Pos.id; revert q_positive;
   unfold Qlt; now rewrite Z.mul_1_r.
 Qed.
 
-Lemma Q_as_fraction : forall q : Q, (inject_Z (Qnum q) / inject_Z (' Qden q) == q)%Q.
+Lemma Q_as_fraction (q : Q) : (inject_Z (Qnum q) / inject_Z (' Qden q) == q)%Q.
 Proof.
-  intro q; unfold Qeq; simpl; ring.
+  unfold Qeq; simpl; ring.
 Qed.
 
 Lemma num_over_den : forall q : QPos,
@@ -408,13 +408,9 @@ Qed.
 
 Lemma Qmul_ge1_ge1 : forall (q r : Q), 1 <= q  ->  1 <= r  ->  1 <= q * r.
 Proof.
-  intros q r one_le_q one_le_r.
-  setoid_replace 1 with (1 * 1) by ring.
-  apply Qle_trans with (y := q * 1).
-  apply Qmult_le_r. easy. easy.
-  apply Qmult_le_l.
-  apply Qlt_le_trans with (y := 1).
-  easy. easy. easy.
+  intros q r one_le_q one_le_r; setoid_replace 1 with (1 * 1) by ring;
+  apply Qle_trans with (y := q * 1); [ apply Qmult_le_r |
+  apply Qmult_le_l; [apply Qlt_le_trans with (y := 1) | ]]; easy.
 Qed.
 
 Hint Resolve Qmul_gt1_gt1.
@@ -442,41 +438,37 @@ Open Scope QPos.
 
 Lemma twopower_of_positive : forall p, (0 < p)%Z -> 1 < twopower p.
 Proof.
-  intros p p_pos; unfold twopower, QPos.lt; simpl.
-  rewrite inject_Z_one.
-  apply Qpower_one_lt; easy.
+  intros p p_pos; unfold twopower, QPos.lt; simpl;
+  rewrite inject_Z_one; apply Qpower_one_lt; easy.
 Qed.
 
 
 Lemma twopower_of_nonnegative : forall p, (0 <= p)%Z -> 1 <= twopower p.
 Proof.
-  intros p p_nonneg; unfold twopower, QPos.le; simpl.
-  rewrite inject_Z_one.
-  apply Qpower_one_le; easy.
+  intros p p_nonneg; unfold twopower, QPos.le; simpl;
+  rewrite inject_Z_one; apply Qpower_one_le; easy.
 Qed.
 
 
 Lemma twopower_monotonic : forall p q, (p <= q)%Z -> twopower p <= twopower q.
 Proof.
-  intros p q p_le_q.
-  (* rewrite as twopower p * 1 <= twopower q *)
-  rewrite <- QPos.mul_1_r at 1.
-  rewrite QPos.mul_comm.
-  apply QPos_div_mul_le_l.
-  rewrite <- twopower_div.
-  apply twopower_of_nonnegative.
+  intros p q p_le_q;
+  (* rewrite as 1 * twopower p <= twopower q *)
+  rewrite <- QPos.mul_1_l at 1;
+  apply QPos_div_mul_le_l;
+  rewrite <- twopower_div;
+  apply twopower_of_nonnegative;
   auto with zarith.
 Qed.
 
 
 Lemma twopower_monotonic_lt : forall m n, (m < n)%Z -> twopower m < twopower n.
 Proof.
-  intros m n m_lt_n.
-  rewrite <- QPos.mul_1_r at 1.
-  rewrite QPos.mul_comm.
-  apply QPos_div_mul_lt_l.
-  rewrite <- twopower_div.
-  apply twopower_of_positive.
+  intros m n m_lt_n;
+  rewrite <- QPos.mul_1_l at 1;
+  apply QPos_div_mul_lt_l;
+  rewrite <- twopower_div;
+  apply twopower_of_positive;
   omega.
 Qed.
 
