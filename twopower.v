@@ -52,13 +52,6 @@ Proof.
   auto with qarith.
 Qed.
 
-Lemma Q_div_pos_pos : forall p q : Q, (0 < p -> 0 < q -> 0 < p / q)%Q.
-Proof.
-  intros p q p_positive q_positive; apply Q_mul_pos_pos;
-  try apply Qinv_lt_0_compat; easy.
-Qed.
-
-
 Lemma two_to_the_power_n_is_nonzero : forall n: Z, (~ (inject_Z 2)^n == 0)%Q.
 Proof.
   intro n; destruct n; simpl; try (rewrite <- Qinv_power_positive);
@@ -81,39 +74,6 @@ Definition twopower (n : Z) : QPos.
   apply two_to_the_power_n_is_positive.
 Defined.
 
-(* Now let's define the binade of a positive rational. *)
-
-Definition QPos_num (q : QPos) := Z.to_pos (Qnum (proj1_sig q)).
-Definition QPos_den (q : QPos) := Qden (proj1_sig q).
-
-(* Creation of a positive rational from a positive integer. *)
-
-Definition QPos_from_pos (p : positive) : QPos.
-  refine (exist _ (inject_Z (' p)) _); apply Pos2Z.is_pos.
-Defined.
-
-(* Multiplication and division for positive rationals. *)
-
-Lemma QPos_num_positive (q : Q) : (0 < q)%Q -> ('Z.to_pos (Qnum q) = Qnum q)%Z.
-Proof.
-  intros q_positive; apply Z2Pos.id; revert q_positive;
-  unfold Qlt; now rewrite Z.mul_1_r.
-Qed.
-
-Lemma Q_as_fraction (q : Q) : (inject_Z (Qnum q) / inject_Z (' Qden q) == q)%Q.
-Proof.
-  unfold Qeq; simpl; ring.
-Qed.
-
-Lemma num_over_den : forall q : QPos,
-  QPos_from_pos (QPos_num q) / QPos_from_pos (QPos_den q) == q.
-Proof.
-  intro q. destruct q.
-  unfold QPos.eq, QPos.div, QPos_num, QPos_den. simpl.
-  rewrite QPos_num_positive; [ | easy].
-  apply Q_as_fraction.
-Qed.
-
 Lemma twopower_compat : forall p, twopower (' p) == QPos_from_pos (2^p).
 Proof.
   intro p. unfold QPos.eq. simpl.
@@ -123,99 +83,9 @@ Proof.
 Qed.
 
 
-Instance QPos_Setoid : Equivalence QPos.eq.
-Proof.
-  split; unfold QPos.eq; intro; [reflexivity | now symmetry |
-    intros y z; now transitivity (proj1_sig y)].
-Qed.
-
-Add Morphism QPos.lt : QPos_lt_morphism.
-Proof.
-  unfold QPos.lt, QPos.eq.
-  destruct x, y. simpl. intro.
-  destruct x1, y0. simpl. intro.
-  rewrite H. rewrite H0. reflexivity.
-Qed.
-
-Add Morphism QPos.le : QPos_le_morphism.
-Proof.
-  unfold QPos.le, QPos.eq.
-  destruct x, y. simpl. intro.
-  destruct x1, y0. simpl. intro.
-  rewrite H. rewrite H0. reflexivity.
-Qed.
-
-Add Morphism QPos.mul : QPos_mul_morphism.
-  unfold QPos.eq; simpl; intros; rewrite H; now rewrite H0.
-Qed.
-
-Add Morphism QPos.div : QPos_div_morphism.
-  unfold QPos.eq; simpl; intros; rewrite H; now rewrite H0.
-Qed.
-
-
-Lemma QPos_from_pos_lt : forall p q, (p < q)%positive  -> QPos_from_pos p < QPos_from_pos q.
-Proof.
-  intros; unfold QPos.lt; simpl; rewrite <- Zlt_Qlt; unfold Zlt;
-  now apply Pos.compare_lt_iff.
-Qed.
-
-Lemma QPos_from_pos_le : forall p q, (p <= q)%positive ->
-  QPos_from_pos p <= QPos_from_pos q.
-Proof.
-  intros. unfold QPos.le. simpl. rewrite <- Zle_Qle. unfold Zle.
-  now apply Pos.compare_le_iff.
-Qed.
-
 Lemma twopower_mul : forall p q : Z, twopower (p + q) == (twopower p) * (twopower q).
 Proof.
   unfold QPos.eq, twopower; intros; now apply Qpower_plus.
-Qed.
-
-Lemma QPos_mul_inv_l p : /p * p == 1.
-Proof.
-  rewrite QPos.mul_comm. apply QPos.mul_inv_r.
-Qed.
-
-Lemma QPos_div_mul b c : b / c * c == b.
-Proof.
-  unfold QPos.div.
-  rewrite <- QPos.mul_assoc. rewrite QPos_mul_inv_l.
-  apply QPos.mul_1_r.
-Qed.
-
-Lemma QPos_mul_div b c : b * c / c == b.
-Proof.
-  unfold QPos.div.
-  rewrite <- QPos.mul_assoc.
-  rewrite QPos.mul_inv_r.
-  apply QPos.mul_1_r.
-Qed.
-
-Lemma QPos_div_mul_r a b c : a == b / c  <->  a * c == b.
-  split; intro; [rewrite H | rewrite <- H].
-  apply QPos_div_mul. symmetry.  apply QPos_mul_div.
-Qed.
-
-Lemma QPos_div_mul_le_r a b c : b / c <= a  <->  b <= a * c.
-Proof.
-  rewrite QPos.mul_le_mono_r with (p := c).
-  setoid_replace (b / c * c) with b. easy.
-  apply QPos_div_mul.
-Qed.
-
-Lemma QPos_div_mul_le_l a b c : a <= b / c  <->  a * c <= b.
-Proof.
-  rewrite QPos.mul_le_mono_r with (p := c).
-  setoid_replace (b / c * c) with b. easy.
-  apply QPos_div_mul.
-Qed.
-
-Lemma QPos_div_mul_lt_l a b c : a < b / c  <->  a * c < b.
-Proof.
-  rewrite QPos.mul_lt_mono_r with (p := c).
-  setoid_replace (b / c * c) with b. easy.
-  apply QPos_div_mul.
 Qed.
 
 Lemma twopower_div : forall p q : Z, twopower (p - q) == (twopower p) / (twopower q).
@@ -234,22 +104,6 @@ Lemma twopower_one : twopower 1 == 2.
 Proof.
   easy.
 Qed.
-
-Lemma QPos_from_pos_one : QPos_from_pos 1 == 1.
-Proof.
-  easy.
-Qed.
-
-Lemma QPos_from_pos_two : QPos_from_pos 2 == 2.
-Proof.
-  easy.
-Qed.
-
-Lemma QPos_from_pos_mul: forall p q, QPos_from_pos (p * q) == QPos_from_pos p * QPos_from_pos q.
-Proof.
-  unfold QPos.eq. intros. simpl. easy.
-Qed.
-
 
 Lemma positive_times_two : forall p, (p~0 = p * 2)%positive.
 Proof.
@@ -278,12 +132,6 @@ Proof.
 Qed.
 
 Notation "x <= y < z" := ((x <= y) /\ (y < z)) : QPos_scope.
-
-
-Lemma QPos_lt_le_weak : forall p q, p < q  -> p <= q.
-Proof.
-  unfold QPos.le, QPos.lt; intros p q; destruct p, q; auto with qarith.
-Qed.
 
 
 Open Scope Q.
@@ -542,12 +390,6 @@ Proof.
 Qed.
 
 
-Lemma QPos_le_eq p q : p == q  ->  p <= q.
-Proof.
-  intro p_eq_q. rewrite p_eq_q. unfold QPos.le. destruct q. simpl. auto with qarith.
-Qed.
-
-
 Lemma twopower_injective m n : twopower m == twopower n -> m = n.
 Proof.
   intro H.
@@ -558,20 +400,6 @@ Proof.
   apply twopower_injective_le.
   now apply QPos_le_eq.
 Qed.
-
-
-Lemma QPos_le_antisymm q r : q <= r -> r <= q -> q == r.
-Proof.
-  unfold QPos.le, QPos.eq; destruct q, r; simpl.
-  auto with qarith.
-Qed.
-
-
-Lemma QPos_le_refl q : q <= q.
-Proof.
-  unfold QPos.le; destruct q; simpl; auto with qarith.
-Qed.
-
 
 
 Theorem binade_twopower_eq n : (binade (twopower n) = n)%Z.
