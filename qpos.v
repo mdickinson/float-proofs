@@ -359,6 +359,13 @@ Proof.
   apply QPos_div_mul.
 Qed.
 
+Lemma QPos_div_mul_lt_r a b c : b / c < a  <->  b < a * c.
+Proof.
+  rewrite QPos.mul_lt_mono_r with (p := c).
+  setoid_replace (b / c * c) with b. easy.
+  apply QPos_div_mul.
+Qed.
+
 Lemma QPos_from_pos_one : QPos_from_pos 1 == 1.
 Proof.
   easy.
@@ -379,3 +386,64 @@ Lemma QPos_lt_le_weak : forall p q, p < q  -> p <= q.
 Proof.
   unfold QPos.le, QPos.lt; intros p q; destruct p, q; auto with qarith.
 Qed.
+
+
+
+Lemma QPos_le_lt_trans a b c : a <= b -> b < c -> a < c.
+Proof.
+  unfold QPos.le, QPos.lt. destruct a, b, c. simpl.
+  apply Qle_lt_trans.
+Qed.
+
+Lemma QPos_mul_le_lt a b c d : a <= c -> d < b  ->  a * d < c * b.
+Proof.
+  intros; apply QPos_le_lt_trans with (b := c * d);
+  [now apply QPos.mul_le_mono_r | now apply QPos.mul_lt_mono_l].
+Qed.
+
+Lemma QPos_div_le_lt a b c d : a <= c -> d < b  ->  a / b < c / d.
+Proof.
+  intros.
+  apply QPos.mul_lt_mono_r with (p := b * d).
+  setoid_replace (a / b * (b * d)) with (a * d).
+  setoid_replace (c / d * (b * d)) with (c * b).
+  now apply QPos_mul_le_lt.
+
+  (* Left with two equality goals. Cheat by mapping to Q and using the big
+  guns. *)
+  unfold QPos.eq; destruct a, b, c, d; simpl; field; apply Qnot_eq_sym;
+  now apply Qlt_not_eq.
+
+  unfold QPos.eq; destruct a, b, c, d; simpl; field. apply Qnot_eq_sym;
+  now apply Qlt_not_eq.
+Qed.
+
+Lemma QPos_div_lt_le a b c d : a < c -> d <= b -> a / b < c / d.
+Proof.
+  intros.
+  apply QPos.mul_lt_mono_r with (p := b * d).
+  setoid_replace (a / b * (b * d)) with (d * a).
+  setoid_replace (c / d * (b * d)) with (b * c).
+  now apply QPos_mul_le_lt.
+
+  unfold QPos.eq; destruct a, b, c, d; simpl; field; apply Qnot_eq_sym;
+  now apply Qlt_not_eq.
+
+  unfold QPos.eq; destruct a, b, c, d; simpl; field; apply Qnot_eq_sym;
+  now apply Qlt_not_eq.
+Qed.
+
+Lemma QPos_le_trans a b c : a <= b -> b <= c -> a <= c.
+Proof.
+  destruct a, b, c; unfold QPos.le; QOrder.order.
+Qed.
+
+
+Lemma QPos_lt_le_trans a b c : a < b -> b <= c -> a < c.
+Proof.
+  destruct a, b, c; unfold QPos.le, QPos.lt; apply Qlt_le_trans.
+Qed.
+
+SearchAbout (_ <? _).
+
+SearchAbout (_ <= _ -> _ <= _ -> _ <= _)%Q.

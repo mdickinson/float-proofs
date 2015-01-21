@@ -136,12 +136,6 @@ Notation "x <= y < z" := ((x <= y) /\ (y < z)) : QPos_scope.
 
 Open Scope Q.
 
-Lemma Q_over_one : forall a, a / 1 == a.
-Proof.
-  intro; unfold Qdiv, Qinv; destruct a;
-  apply f_equal2; simpl; [rewrite (Z.mul_1_r) | rewrite (Pos.mul_1_r)]; easy.
-Qed.
-
 
 Lemma Q_div_le_lt a b c d : 0 < c -> 0 < d -> a <= c -> d < b  -> a / b < c / d.
 Proof.
@@ -163,19 +157,7 @@ Proof.
   eapply Qlt_le_trans; [ apply Qmult_lt_r | apply Qmult_le_l]; easy.
 Qed.
 
-
-
-
 Open Scope QPos.
-
-Lemma QPos_div_le_lt a b c d : a <= c -> d < b  ->  a / b < c / d.
-Proof.
-  destruct a, b, c, d; unfold QPos.lt, QPos.le; now apply Q_div_le_lt.
-Qed.
-
-Lemma QPos_div_lt_le a b c d : a < c -> d <= b -> a / b < c / d.
-  destruct a, b, c, d; unfold QPos.lt, QPos.le; now apply Q_div_lt_le.
-Qed.
 
 Hint Resolve QPos_lt_le_weak.
 Hint Resolve QPos_div_le_lt.
@@ -321,12 +303,6 @@ Proof.
 Qed.
 
 
-Lemma QPos_lt_le_trans a b c : a < b -> b <= c -> a < c.
-Proof.
-  destruct a, b, c; unfold QPos.le, QPos.lt; apply Qlt_le_trans.
-Qed.
-
-
 Lemma twopower_binade_contrapos n q : (binade q < n)%Z  ->  q < twopower n.
 Proof.
   intros.
@@ -346,11 +322,6 @@ Proof.
   intros q r; destruct q, r; unfold QPos.le, QPos.lt; split; QOrder.order.
 Qed.
 
-Lemma QPos_le_trans : forall p q r, p <= q -> q <= r -> p <= r.
-Proof.
-  intros p q r; destruct p, q, r; unfold QPos.le; QOrder.order.
-Qed.
-
 (* Now the main theorem that effectively acts as a specification for binade. *)
 
 Theorem twopower_binade_le n q : twopower n <= q  <->  (n <= binade q)%Z.
@@ -364,7 +335,7 @@ Proof.
   now apply twopower_binade_contrapos.
 
   (* Second direction: showing that n <= binade q  implies twopower n <= q. *)
-  apply QPos_le_trans with (q := twopower (binade q)).
+  apply QPos_le_trans with (b := twopower (binade q)).
   now apply twopower_monotonic.
   apply binade_bound.
 Qed.
@@ -416,7 +387,7 @@ Qed.
 Theorem binade_monotonic q r : q <= r  -> (binade q <= binade r)%Z.
 Proof.
   intro q_le_r. apply twopower_binade_le.
-  apply QPos_le_trans with (q := q).
+  apply QPos_le_trans with (b := q).
   apply binade_bound. easy.
 Qed.
 
