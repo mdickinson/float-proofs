@@ -63,8 +63,50 @@ Proof.
   intros.
   apply nonzero_and_nonneg_implies_positive.
   apply two_to_the_power_n_is_nonzero.
-  apply Qpower_pos.
-  discriminate.
+  now apply Qpower_pos.
+Qed.
+
+Lemma Qmul_gt1_gt1 : forall (q r : Q), 1 < q -> 1 < r -> 1 < q * r.
+Proof.
+  intros q r one_lt_q one_lt_r.
+  setoid_replace 1 with (1 * 1) by ring.
+  apply Qlt_trans with (y := q * 1).
+  apply Qmult_lt_r. easy. easy.
+  apply Qmult_lt_l.
+  apply Qlt_trans with (y := 1); auto.
+  easy. easy.
+Qed.
+
+Lemma Qmul_ge1_ge1 : forall (q r : Q), 1 <= q  ->  1 <= r  ->  1 <= q * r.
+Proof.
+  intros q r one_le_q one_le_r; setoid_replace 1 with (1 * 1) by ring;
+  apply Qle_trans with (y := q * 1); [ apply Qmult_le_r |
+  apply Qmult_le_l; [apply Qlt_le_trans with (y := 1) | ]]; easy.
+Qed.
+
+Lemma inject_Z_one : (inject_Z 1 == 1).
+Proof.
+  easy.
+Qed.
+
+
+Hint Resolve Qmul_gt1_gt1.
+Hint Resolve Qmul_ge1_ge1.
+
+Lemma Qpower_one_lt : forall (n : Z) (q : Q),
+  (0 < n)%Z  ->  1 < q  ->  1 < q^n.
+Proof.
+  intros; unfold Qpower; destruct n; try (now contradict H);
+  induction p; simpl; auto.
+Qed.
+
+
+Lemma Qpower_one_le : forall (n : Z) (q : Q),
+  (0 <= n)%Z  ->  1 <= q  -> 1 <= q^n.
+Proof.
+  intros; unfold Qpower; destruct n;
+  [ | unfold Qpower_positive; induction p; simpl | contradiction H];
+  auto.
 Qed.
 
 Open Scope QPos.
@@ -105,6 +147,75 @@ Proof.
   easy.
 Qed.
 
+Lemma twopower_of_positive : forall p, (0 < p)%Z -> 1 < twopower p.
+Proof.
+  intros p p_pos; unfold twopower, QPos.lt; simpl;
+  rewrite inject_Z_one; apply Qpower_one_lt; easy.
+Qed.
+
+
+Lemma twopower_of_nonnegative : forall p, (0 <= p)%Z -> 1 <= twopower p.
+Proof.
+  intros p p_nonneg; unfold twopower, QPos.le; simpl;
+  rewrite inject_Z_one; apply Qpower_one_le; easy.
+Qed.
+
+
+Lemma twopower_monotonic_le : forall p q, (p <= q)%Z -> twopower p <= twopower q.
+Proof.
+  intros p q p_le_q;
+  (* rewrite as 1 * twopower p <= twopower q *)
+  rewrite <- QPos.mul_1_l at 1;
+  apply QPos_div_mul_le_l;
+  rewrite <- twopower_div;
+  apply twopower_of_nonnegative;
+  auto with zarith.
+Qed.
+
+
+Lemma twopower_monotonic_lt : forall m n, (m < n)%Z -> twopower m < twopower n.
+Proof.
+  intros m n m_lt_n;
+  rewrite <- QPos.mul_1_l at 1;
+  apply QPos_div_mul_lt_l;
+  rewrite <- twopower_div;
+  apply twopower_of_positive;
+  omega.
+Qed.
+
+
+Lemma twopower_injective_lt m n : twopower m < twopower n  ->  (m < n)%Z.
+Proof.
+  intro.
+  apply Z.lt_nge.
+  contradict H.
+  apply QPos_le_ngt.
+  now apply twopower_monotonic_le.
+Qed.
+
+
+Lemma twopower_injective_le m n : twopower m <= twopower n  ->  (m <= n)%Z.
+Proof.
+  intro.
+  apply Z.nlt_ge.
+  contradict H.
+  apply QPos_lt_nge.
+  now apply twopower_monotonic_lt.
+Qed.
+
+
+Lemma twopower_injective m n : twopower m == twopower n -> m = n.
+Proof.
+  intro H.
+  apply Z.le_antisymm.
+  apply twopower_injective_le.
+  now apply QPos_le_eq.
+
+  apply twopower_injective_le.
+  now apply QPos_le_eq.
+Qed.
+
+
 Lemma positive_times_two : forall p, (p~0 = p * 2)%positive.
 Proof.
   intro; rewrite Pos.mul_xO_r; now rewrite Pos.mul_1_r.
@@ -131,34 +242,6 @@ Proof.
   apply pos_size_le'.
 Qed.
 
-Notation "x <= y < z" := ((x <= y) /\ (y < z)) : QPos_scope.
-
-
-Open Scope Q.
-
-
-Lemma Q_div_le_lt a b c d : 0 < c -> 0 < d -> a <= c -> d < b  -> a / b < c / d.
-Proof.
-  intros.
-  assert (0 < b) by (eapply Qlt_trans; eauto).
-  apply Qmult_lt_r with (z := b * d); [ now apply Q_mul_pos_pos | ].
-  setoid_replace (a / b * (b * d)) with (a * d) by field; [ | auto with qarith].
-  setoid_replace (c / d * (b * d)) with (c * b) by field; [ | auto with qarith].
-  eapply Qle_lt_trans; [ apply Qmult_le_r | apply Qmult_lt_l]; easy.
-Qed.
-
-Lemma Q_div_lt_le a b c d : 0 < c -> 0 < d -> a < c -> d <= b -> a / b < c / d.
-Proof.
-  intros.
-  assert (0 < b) by (eapply Qlt_le_trans; eauto).
-  apply Qmult_lt_r with (z := b * d); [now apply Q_mul_pos_pos |].
-  setoid_replace (a / b * (b * d)) with (a * d) by field; [ | auto with qarith].
-  setoid_replace (c / d * (b * d)) with (c * b) by field; [ | auto with qarith].
-  eapply Qlt_le_trans; [ apply Qmult_lt_r | apply Qmult_le_l]; easy.
-Qed.
-
-Open Scope QPos.
-
 Hint Resolve QPos_lt_le_weak.
 Hint Resolve QPos_div_le_lt.
 Hint Resolve QPos_div_lt_le.
@@ -183,21 +266,10 @@ Proof.
   rewrite twopower_div. auto.
 Qed.
 
+
 Definition binade (q : QPos) : Z :=
   let trial_binade := ('Pos.size (QPos_num q) - 'Pos.size (QPos_den q))%Z in
   if q <? twopower trial_binade then (trial_binade - 1)%Z else trial_binade.
-
-
-Lemma QPos_ltb_le : forall q r, (q <? r) = false  <->  r <= q.
-Proof.
-  unfold QPos.le, QPos.ltb, QPos.compare. intros q r. destruct q, r. simpl.
-  case_eq (x ?= x0)%Q.
-  rewrite <- Qeq_alt. intuition.
-  rewrite H. auto with qarith.
-  rewrite <- Qlt_alt. intuition. exfalso. assert (x < x)%Q.
-  eapply Qlt_le_trans; eauto. revert H1. unfold Qlt. auto with zarith.
-  rewrite <- Qgt_alt. intuition.
-Qed.
 
 
 Lemma binade_bound : forall q : QPos,
@@ -218,108 +290,13 @@ Proof.
   rewrite Heqtrial_binade. apply trial_binade_bound.
 Qed.
 
-Lemma inject_Z_one : (inject_Z 1 == 1)%Q.
-Proof.
-  easy.
-Qed.
-
-Open Scope Q.
-
-Lemma Qmul_gt1_gt1 : forall (q r : Q), 1 < q -> 1 < r -> 1 < q * r.
-Proof.
-  intros q r one_lt_q one_lt_r.
-  setoid_replace 1 with (1 * 1) by ring.
-  apply Qlt_trans with (y := q * 1).
-  apply Qmult_lt_r. easy. easy.
-  apply Qmult_lt_l.
-  apply Qlt_trans with (y := 1); auto.
-  easy. easy.
-Qed.
-
-Lemma Qmul_ge1_ge1 : forall (q r : Q), 1 <= q  ->  1 <= r  ->  1 <= q * r.
-Proof.
-  intros q r one_le_q one_le_r; setoid_replace 1 with (1 * 1) by ring;
-  apply Qle_trans with (y := q * 1); [ apply Qmult_le_r |
-  apply Qmult_le_l; [apply Qlt_le_trans with (y := 1) | ]]; easy.
-Qed.
-
-Hint Resolve Qmul_gt1_gt1.
-Hint Resolve Qmul_ge1_ge1.
-
-Lemma Qpower_one_lt : forall (n : Z) (q : Q),
-  (0 < n)%Z  ->  1 < q  ->  1 < q^n.
-Proof.
-  intros; unfold Qpower; destruct n; try (now contradict H);
-  induction p; simpl; auto.
-Qed.
-
-
-Lemma Qpower_one_le : forall (n : Z) (q : Q),
-  (0 <= n)%Z  ->  1 <= q  -> 1 <= q^n.
-Proof.
-  intros; unfold Qpower; destruct n;
-  [ | unfold Qpower_positive; induction p; simpl | contradiction H];
-  auto.
-Qed.
-
-
-
-Open Scope QPos.
-
-Lemma twopower_of_positive : forall p, (0 < p)%Z -> 1 < twopower p.
-Proof.
-  intros p p_pos; unfold twopower, QPos.lt; simpl;
-  rewrite inject_Z_one; apply Qpower_one_lt; easy.
-Qed.
-
-
-Lemma twopower_of_nonnegative : forall p, (0 <= p)%Z -> 1 <= twopower p.
-Proof.
-  intros p p_nonneg; unfold twopower, QPos.le; simpl;
-  rewrite inject_Z_one; apply Qpower_one_le; easy.
-Qed.
-
-
-Lemma twopower_monotonic : forall p q, (p <= q)%Z -> twopower p <= twopower q.
-Proof.
-  intros p q p_le_q;
-  (* rewrite as 1 * twopower p <= twopower q *)
-  rewrite <- QPos.mul_1_l at 1;
-  apply QPos_div_mul_le_l;
-  rewrite <- twopower_div;
-  apply twopower_of_nonnegative;
-  auto with zarith.
-Qed.
-
-
-Lemma twopower_monotonic_lt : forall m n, (m < n)%Z -> twopower m < twopower n.
-Proof.
-  intros m n m_lt_n;
-  rewrite <- QPos.mul_1_l at 1;
-  apply QPos_div_mul_lt_l;
-  rewrite <- twopower_div;
-  apply twopower_of_positive;
-  omega.
-Qed.
-
-
 Lemma twopower_binade_contrapos n q : (binade q < n)%Z  ->  q < twopower n.
 Proof.
   intros.
   apply Zlt_le_succ in H; unfold Z.succ in H.
   apply QPos_lt_le_trans with (b := twopower (binade q + 1)).
     apply binade_bound.
-    now apply twopower_monotonic.
-Qed.
-
-Lemma QPos_le_ngt : forall q r, q <= r  <->  ~ (r < q).
-Proof.
-  intros q r; destruct q, r; unfold QPos.le, QPos.lt; split; QOrder.order.
-Qed.
-
-Lemma QPos_lt_nge : forall q r, q < r  <->  ~ (r <= q).
-Proof.
-  intros q r; destruct q, r; unfold QPos.le, QPos.lt; split; QOrder.order.
+    now apply twopower_monotonic_le.
 Qed.
 
 (* Now the main theorem that effectively acts as a specification for binade. *)
@@ -336,7 +313,7 @@ Proof.
 
   (* Second direction: showing that n <= binade q  implies twopower n <= q. *)
   apply QPos_le_trans with (b := twopower (binade q)).
-  now apply twopower_monotonic.
+  now apply twopower_monotonic_le.
   apply binade_bound.
 Qed.
 
@@ -351,34 +328,12 @@ Qed.
 (* We can also use the injectivity of twopower to show that
    binade (twopower n) = n. *)
 
-Lemma twopower_injective_le m n : twopower m <= twopower n  ->  (m <= n)%Z.
-Proof.
-  intro.
-  apply Z.nlt_ge.
-  contradict H.
-  apply QPos_lt_nge.
-  now apply twopower_monotonic_lt.
-Qed.
-
-
-Lemma twopower_injective m n : twopower m == twopower n -> m = n.
-Proof.
-  intro H.
-  apply Z.le_antisymm.
-  apply twopower_injective_le.
-  now apply QPos_le_eq.
-
-  apply twopower_injective_le.
-  now apply QPos_le_eq.
-Qed.
-
-
 Theorem binade_twopower_eq n : (binade (twopower n) = n)%Z.
 Proof.
   apply twopower_injective.
   apply QPos_le_antisymm.
   apply twopower_binade_le. auto with zarith.
-  apply twopower_monotonic.
+  apply twopower_monotonic_le.
   apply twopower_binade_le.
   apply QPos_le_refl.
 Qed.

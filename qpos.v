@@ -215,7 +215,9 @@ Infix "/" := QPos.div : QPos_scope.
 Notation "/ p" := (QPos.inv p) : QPos_scope.
 
 Notation "1" := QPos.one : QPos_scope.
-Notation "2" := QPos.two : QPos_scope. 
+Notation "2" := QPos.two : QPos_scope.
+
+Notation "x <= y < z" := ((x <= y) /\ (y < z)) : QPos_scope.
 
 (* Additional results about QPos. *)
 
@@ -444,6 +446,25 @@ Proof.
   destruct a, b, c; unfold QPos.le, QPos.lt; apply Qlt_le_trans.
 Qed.
 
-SearchAbout (_ <? _).
 
-SearchAbout (_ <= _ -> _ <= _ -> _ <= _)%Q.
+Lemma QPos_le_ngt : forall q r, q <= r  <->  ~ (r < q).
+Proof.
+  intros q r; destruct q, r; unfold QPos.le, QPos.lt; split; QOrder.order.
+Qed.
+
+Lemma QPos_lt_nge : forall q r, q < r  <->  ~ (r <= q).
+Proof.
+  intros q r; destruct q, r; unfold QPos.le, QPos.lt; split; QOrder.order.
+Qed.
+
+
+Lemma QPos_ltb_le : forall q r, (q <? r) = false  <->  r <= q.
+Proof.
+  unfold QPos.le, QPos.ltb, QPos.compare. intros q r. destruct q, r. simpl.
+  case_eq (x ?= x0)%Q.
+  rewrite <- Qeq_alt. intuition.
+  rewrite H. auto with qarith.
+  rewrite <- Qlt_alt. intuition. exfalso. assert (x < x)%Q.
+  eapply Qlt_le_trans; eauto. revert H1. unfold Qlt. auto with zarith.
+  rewrite <- Qgt_alt. intuition.
+Qed.
