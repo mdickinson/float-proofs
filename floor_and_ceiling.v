@@ -183,6 +183,46 @@ Qed.
 Definition is_integer (q : Q) : Prop :=
   exists n : Z, inject_Z n == q.
 
+Add Morphism is_integer : is_integer_morphism.
+Proof.
+  unfold is_integer; split; intro H0; destruct H0 as [z H0]; exists z;
+    now rewrite H0.
+Qed.
+
+Lemma is_integer_inject_Z (x : Z) : is_integer (inject_Z x).
+Proof.
+  now exists x.
+Qed.
+
+Lemma is_integer_neg (x : Q) : is_integer x -> is_integer (-x).
+Proof.
+  unfold is_integer; intro H; destruct H as [y H0]; exists (-y)%Z;
+  rewrite inject_Z_opp; now rewrite H0.
+Qed.
+
+Lemma is_integer_add (x y : Q) :
+  is_integer x -> is_integer y -> is_integer (x + y).
+Proof.
+  unfold is_integer; intros x_int y_int; destruct x_int as [x0 x_int];
+  destruct y_int as [y0 y_int]; exists (x0 + y0)%Z; rewrite inject_Z_plus;
+  rewrite x_int; now rewrite y_int.
+Qed.
+
+Lemma is_integer_sub (x y : Q) :
+  is_integer x -> is_integer y -> is_integer (x - y).
+Proof.
+  intros; apply is_integer_add; [ | apply is_integer_neg]; easy.
+Qed.
+
+Lemma is_integer_mul (x y : Q) :
+  is_integer x -> is_integer y -> is_integer (x * y).
+Proof.
+  unfold is_integer; intros x_int y_int; destruct x_int as [x0 x_int];
+  destruct y_int as [y0 y_int]; exists (x0 * y0)%Z; rewrite inject_Z_mult;
+  rewrite x_int; now rewrite y_int.
+Qed.
+
+
 Lemma floor_ceiling_bound : forall q : Q, (ceiling q <= floor q + 1)%Z.
 Proof.
   intro.
@@ -194,7 +234,7 @@ Proof.
   apply floor_spec_alt; assumption.
   auto with qarith.
 Qed.
-  
+
 Lemma floor_le_ceiling : forall q : Q, (floor q <= ceiling q)%Z.
 Proof.
   intro.
