@@ -264,7 +264,6 @@ Proof.
     exists (floor q). assumption.
 Qed.
 
-
 Lemma ceiling_integer : forall q : Q,
   is_integer q  <->  inject_Z (ceiling q) == q.
 Proof.
@@ -273,6 +272,15 @@ Proof.
   [ destruct H; rewrite <- H;
     rewrite ceiling_inject; reflexivity
     | exists (ceiling q); assumption].
+Qed.
+
+(* As a corollary, is_integer is decidable. *)
+
+Lemma is_integer_is_decidable : forall q : Q,
+  is_integer q  \/  ~is_integer q.
+Proof.
+  intro; rewrite floor_integer; generalize (inject_Z (floor q)) as r; intro;
+  destruct (Qeq_dec q r) as [q0 | q0]; [left | right; contradict q0]; easy.
 Qed.
 
 
