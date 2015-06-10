@@ -147,79 +147,12 @@ Proof.
   now apply Qpower.Zpower_Qpower.
 Qed.
 
-Definition is_integral (z : Q) := exists m : Z, inject_Z m == z.
-
-Add Morphism is_integral : is_integral_morphism.
-Proof.
-  intros. unfold is_integral. split.
-    intro H0. destruct H0. exists x0. rewrite H0. easy.
-    intro H0. destruct H0. exists x0. rewrite H0. easy.
-Qed.
-
-Lemma is_integral_inject_Z (x : Z) : is_integral (inject_Z x).
-Proof.
-  unfold is_integral. exists x. easy.
-Qed.
-
-Lemma is_integral_neg (x : Q) :
-  is_integral x -> is_integral (-x).
-Proof.
-  unfold is_integral. intros.
-  destruct H.
-  exists (- x0)%Z.
-  SearchAbout (inject_Z (- _)).
-  rewrite inject_Z_opp.
-  now rewrite H.
-Qed.
-  
-Lemma is_integral_add (x y : Q) :
-  is_integral x -> is_integral y -> is_integral (x + y).
-Proof.
-  unfold is_integral.
-  intros.
-  destruct H.
-  destruct H0.
-  exists (x0 + x1)%Z.
-  SearchAbout inject_Z (_ + _).
-  rewrite inject_Z_plus.
-  rewrite H.
-  rewrite H0.
-  easy.
-Qed.
-  
-Lemma is_integral_sub (x y : Q) :
-  is_integral x -> is_integral y -> is_integral (x - y).
-Proof.
-  intros.
-  setoid_replace (x - y) with (x + (-y)) by ring.
-  apply is_integral_add.
-  assumption.
-  apply is_integral_neg.
-  assumption.
-Qed.
-
-Lemma is_integral_mul (x y : Q) :
-  is_integral x -> is_integral y -> is_integral (x * y).
-Proof.
-  unfold is_integral.
-  intros x_integral y_integral.
-  destruct x_integral.
-  destruct y_integral.
-  exists (x0 * x1)%Z.
-  SearchAbout (inject_Z (_ * _)).
-  Check inject_Z_mult.
-  rewrite inject_Z_mult.
-  rewrite H.
-  rewrite H0.
-  easy.
-Qed.
-
-Lemma is_integral_twopower (x : Z) :
-  (0 <= x)%Z -> is_integral (proj1_sig (twopower x)).
+Lemma is_integer_twopower (x : Z) :
+  (0 <= x)%Z -> is_integer (proj1_sig (twopower x)).
 Proof.
   intro; simpl.
   rewrite <- Qpower.Zpower_Qpower.
-  apply is_integral_inject_Z. easy.
+  apply is_integer_inject_Z. easy.
 Qed.
 
 (* Now we can define the subsets of binary floats of various precisions. *)
@@ -352,7 +285,7 @@ Definition ulp p (x : binary_float p) (x_nonzero : ~(0 == proj1_sig x)) : Q :=
   twopowerQ (binadeQ (proj1_sig x) x_nonzero - 'p + 1).
 
 Definition is_multiple_of (y x : Q) :=
-  exists (m : Q), is_integral m  /\  x == m * y.
+  exists (m : Q), is_integer m  /\  x == m * y.
 
 Add Morphism is_multiple_of : is_multiple_of_morphism.
   intros.
@@ -371,8 +304,8 @@ Proof.
   destruct H0.
   exists (x + x0).
   split.
-  SearchAbout (is_integral (_ + _)).
-  now apply is_integral_add.
+  SearchAbout (is_integer (_ + _)).
+  now apply is_integer_add.
   destruct H.
   destruct H0.
   rewrite H1.
@@ -389,7 +322,7 @@ Proof.
   destruct H. destruct H.
   exists (-x).
   split.
-  now apply is_integral_neg.
+  now apply is_integer_neg.
   rewrite H0.
   ring.
 Qed.
@@ -415,7 +348,7 @@ Proof.
   destruct c_divides_d as [n c_divides_d].
   exists (m*n).
   split.
-  now apply is_integral_mul.
+  now apply is_integer_mul.
   rewrite (proj2 a_divides_b).
   rewrite (proj2 c_divides_d).
   ring.
@@ -427,7 +360,7 @@ Lemma is_multiple_of_transitive (a b c : Q):
 Proof.
   unfold is_multiple_of; intros ab bc; destruct ab as [m Hab];
   destruct bc as [n Hbc]; exists (n * m); split.
-    now apply is_integral_mul.
+    now apply is_integer_mul.
     rewrite (proj2 Hbc); rewrite (proj2 Hab); ring.
 Qed.
 
@@ -437,7 +370,7 @@ Proof.
   unfold is_multiple_of.
   exists (twopowerQ (n - m)).
   split.
-  apply is_integral_twopower.
+  apply is_integer_twopower.
   omega.
   SearchAbout twopowerQ.
   rewrite twopowerQ_mul.
@@ -555,11 +488,11 @@ Proof.
 
   exists (inject_Z m * twopowerQ ('p - 1 - binadeQ (inject_Z m) m_nonzero)).
   split.
-  SearchAbout is_integral.
-  apply is_integral_mul.
-  apply is_integral_inject_Z.
-  SearchAbout is_integral.
-  apply is_integral_twopower.
+  SearchAbout is_integer.
+  apply is_integer_mul.
+  apply is_integer_inject_Z.
+  SearchAbout is_integer.
+  apply is_integer_twopower.
 
   assert (binadeQ (inject_Z m) m_nonzero < 'p)%Z.
   unfold binadeQ.
@@ -596,7 +529,7 @@ Qed.
 
 Lemma large_floats_are_integral (p : positive) (x : binary_float p) :
   let y := proj1_sig x in
-  proj1_sig (twopower ('p - 1)) <= Qabs y  ->  is_integral y.
+  proj1_sig (twopower ('p - 1)) <= Qabs y  ->  is_integer y.
 Proof.
   (* How to prove? x is a float, so it's of the form m * 2**e for some m and e
      with m < 2^p.  It's enough to show that e >= 0.  But if e < 0 then
@@ -622,9 +555,9 @@ Proof.
   intro.
   rewrite H in H1.
   rewrite H.
-  apply is_integral_mul.
-  apply is_integral_inject_Z.
-  apply is_integral_twopower.
+  apply is_integer_mul.
+  apply is_integer_inject_Z.
+  apply is_integer_twopower.
   (* Now all we have to do is show that 0 <= x1. *)
   (* We're given that 2^(p-1) <= abs (x0 * 2^x1),
      and that x0 < 2^p, hence that
@@ -675,11 +608,11 @@ Qed.
 
 Lemma le_floor (x y : Q) :
   x <= y  ->
-  is_integral x ->
+  is_integer x ->
   x <= inject_Z (floor y).
 Proof.
   intro x_le_y.
-  unfold is_integral.
+  unfold is_integer.
   intro.
   destruct H.
   rewrite <- H.
@@ -781,7 +714,7 @@ Hypothesis x_over_y_large :
 
 (* First we show that z is integral. *)
 
-Lemma z_integral : is_integral (proj1_sig z).
+Lemma z_integral : is_integer (proj1_sig z).
 Proof.
   (* It's enough to show that abs(z) >= 2**(r-1). *)
   apply large_floats_are_integral.
@@ -810,7 +743,7 @@ Proof.
 
   apply Qle_trans with (y := inject_Z (floor (Qabs x_over_y))).
   apply le_floor. easy.
-  apply is_integral_twopower.
+  apply is_integer_twopower.
   assert (1 <= 'q)%Z.
   apply Pos.le_1_l.
   assert (1 <= 'r)%Z by apply Pos.le_1_l.
@@ -985,7 +918,7 @@ Proof.
   apply twopowerQ_positive.
   apply le_floor.
   assumption.
-  apply is_integral_twopower.
+  apply is_integer_twopower.
   assert (0 < 'q)%Z by easy; assert (0 < 'r)%Z by easy; omega.
   now apply abs_floor.
 Qed.
@@ -1002,7 +935,7 @@ Proof.
   auto with zarith.
 
   (* Now showing that 2^c is integral. *)
-  apply is_integral_twopower.
+  apply is_integer_twopower.
   
   subst c.
   apply twopowerQ_binadeQ_le.
@@ -1079,7 +1012,7 @@ Proof.
   
 
 
-Lemma x_over_y_integral : is_integral x_over_y.
+Lemma x_over_y_integral : is_integer x_over_y.
 Proof.
   (* TBD *)
 Qed.
