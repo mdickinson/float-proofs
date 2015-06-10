@@ -1,3 +1,6 @@
+(* XXX To do: define floorQ as the composition of inject_Z and floor, and
+   use it everywhere.  Similarly for ceilingQ. *)
+
 (* Define subsets of the rationals representable as binary floats
    with various precisions. *)
 
@@ -10,12 +13,29 @@ Require Import twopower.
 
 Open Scope Q.
 
+(* Some remedial lemmas. *)
+
 Lemma pos_lt_Z_lt (p q : positive) : (p < q)%positive  ->  ('p < 'q)%Z.
 Proof.
   easy.
 Qed.
 
+Lemma lt_sum_is_diff_lt (a b c : Q) : a < b + c  <->  a - c < b.
+Proof.
+  split; intro.
 
+  apply Qplus_lt_r with (z := c).
+  setoid_replace (c + (a - c)) with a by ring.
+  setoid_replace (c + b) with (b + c) by ring.
+  easy.
+
+  apply Qplus_lt_r with (z := -c).
+  setoid_replace (-c + a) with (a - c) by ring.
+  setoid_replace (-c + (b + c)) with b by ring.
+  easy.
+Qed.
+  
+(* Want that a < b + c  <->  a - b < c. *)
 Definition nonzero (x : Q) := ~(0 == x).
 
 Lemma nonzero_div (x y : Q) : nonzero x -> nonzero y -> nonzero (x / y).
@@ -997,8 +1017,27 @@ Qed.
 
 Lemma x_over_y_minus_z_small : Qabs (x_over_y - proj1_sig z) < 1.
 Proof.
-  (* We need to divide into cases: x/y integral and x/y nonintegral. *)
+  (* Split: show x/y - z < 1 and z - x/y < 1. *)
+  apply Qabs_case; intro.
 
+  (* To show: x/y - z < 1. *)
+  apply lt_sum_is_diff_lt.
+  rewrite Qplus_comm.
+  apply lt_sum_is_diff_lt.
+  apply Qlt_le_trans with (y := inject_Z (floor x_over_y)).
+  apply lt_sum_is_diff_lt.
+  now apply floor_spec_alt.
+  apply z_bounds.
+
+  setoid_replace (-(x_over_y - proj1_sig z)) with (proj1_sig z - x_over_y) by ring.
+  apply lt_sum_is_diff_lt.
+  apply Qle_lt_trans with (y := inject_Z (ceiling x_over_y)).
+  apply z_bounds.
+  rewrite Qplus_comm.
+  apply lt_sum_is_diff_lt.
+  now apply ceiling_spec_alt.
+Qed.
+  
 
 Lemma x_minus_yz_small :
   Qabs (proj1_sig x - (proj1_sig y) * (proj1_sig z)) < quantum.
