@@ -1042,8 +1042,34 @@ Qed.
 Lemma x_minus_yz_small :
   Qabs (proj1_sig x - (proj1_sig y) * (proj1_sig z)) < quantum.
 Proof.
-  
-  
+  apply Qlt_trans with (y := Qabs (proj1_sig y)).
+  SearchAbout (_ * _ < _ * _).
+  rewrite <- Qmult_lt_r with (z := / Qabs (proj1_sig y)).
+  field_simplify.
+  rewrite <- Qabs_div.
+  setoid_replace ((proj1_sig x - proj1_sig y * proj1_sig z) / proj1_sig y)
+    with (proj1_sig x / proj1_sig y - proj1_sig z) by field.
+  apply x_over_y_minus_z_small.
+  intro. apply y_nonzero. easy.
+  assumption.
+  SearchAbout (nonzero (Qabs _)).
+  SearchAbout (~(0 == Qabs _)).
+  SearchAbout (0 == Qabs _).
+  intro. apply y_nonzero. apply Qabs_zero. easy.
+  intro. apply y_nonzero. apply Qabs_zero. easy.
+  SearchAbout (0 < / _).
+  apply Qinv_lt_0_compat.
+  SearchAbout (0 < Qabs _).
+  apply abs_nonzero.
+  assumption.
+
+  subst quantum.
+  SearchAbout (_ < twopowerQ _).
+  Check twopowerQ_binadeQ_lt.
+  apply (twopowerQ_binadeQ_lt (b + 1) (proj1_sig y) (y_nonzero)).
+  subst b.
+  omega.
+Qed.
 
   
   
