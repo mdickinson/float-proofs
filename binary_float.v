@@ -167,6 +167,26 @@ Proof.
   now apply Qpower.Zpower_Qpower.
 Qed.
 
+
+Lemma small_integer_is_zero (x : Q) :
+  is_integer x -> Qabs x < 1 -> 0 == x.
+Proof.
+  intro.
+  apply Qabs_case; intros.
+
+  setoid_replace x with (inject_Z (floor x)) by (symmetry; now apply floor_integer).
+  apply inject_Z_injective.
+  rewrite floor_spec_alt. auto.
+
+  setoid_replace x with (inject_Z (ceiling x)) by (symmetry; now apply ceiling_integer).
+  apply inject_Z_injective.
+  rewrite ceiling_spec_alt.
+  setoid_replace (inject_Z 0 - 1) with (- (1)) by ring.
+  assert (-(1) < x) by (now apply Qneg_le).
+  auto.
+Qed.  
+
+  
 Lemma is_integer_twopower (x : Z) :
   (0 <= x)%Z -> is_integer (proj1_sig (twopower x)).
 Proof.
@@ -1071,7 +1091,7 @@ Proof.
   omega.
 Qed.
 
-  
+
 
   
 
