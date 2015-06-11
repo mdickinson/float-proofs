@@ -1072,9 +1072,9 @@ Proof.
 Qed.
 
   
+
   
-  
-  
+
 
 
 Lemma x_over_y_integral : is_integer x_over_y.
