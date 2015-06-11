@@ -404,6 +404,48 @@ Proof.
     rewrite (proj2 Hbc); rewrite (proj2 Hab); ring.
 Qed.
 
+
+Lemma small_multiple_is_zero (m a : Q) :
+  is_multiple_of m a  ->  Qabs a < m  ->  a == 0.
+Proof.
+  unfold is_multiple_of.
+  intros a_multiple a_bounded.
+  assert (0 < m) as m_positive by (apply Qle_lt_trans with (y := Qabs a); [apply Qabs_nonneg | easy]).
+  
+  assert (Qabs m == m) as m_positive2 by (apply Qabs_pos; now apply Qlt_le_weak).
+
+  assert (~ m == 0) as m_nonzero.
+  intro. rewrite H in m_positive.
+  revert m_positive. easy.
+
+  destruct a_multiple as [x is_multiple].
+  destruct is_multiple as [x_is_integer a_is_xm].
+  rewrite a_is_xm.
+
+  cut (x == 0).
+  intro x_zero. rewrite x_zero. ring.
+
+  assert (x == a / m) as x_is_a_by_m.
+  rewrite a_is_xm.
+  field. easy.
+
+  assert (Qabs x < 1).
+  rewrite x_is_a_by_m.
+  SearchAbout (Qabs (_ / _)).
+  rewrite Qabs_div.
+  SearchAbout (_ / _ < _).
+  apply Qlt_shift_div_r.
+  now rewrite m_positive2.
+
+  rewrite m_positive2.
+  now ring_simplify.
+
+  now contradict m_nonzero.
+  symmetry.
+  now apply small_integer_is_zero.
+Qed.
+
+
 Lemma is_multiple_of_twopower (m n : Z) :
   (m <= n)%Z  ->  is_multiple_of (twopowerQ m) (twopowerQ n).
 Proof.
