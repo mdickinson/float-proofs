@@ -213,9 +213,6 @@ Proof.
   destruct (twopower x). simpl. auto with qarith.
 Qed.
 
-Check inject_Z.
-Print inject_Z.
-
 (* for any integers x and y and rational number q, 2^x <= q * 2^y   ->  2^(x - y) <= q *)
 
 Lemma twopowerQ_mul (x y : Z) :
@@ -231,8 +228,6 @@ Proof.
   (* multiply both sides by 2^y on the right using Qmult_le_r. *)
   (*      : forall x y z : Q, 0 < z -> (x * z <= y * z <-> x <= y) *)
   intro.
-  SearchAbout (_ * _ <= _ * _). 
-  Check Qmult_le_r.
   apply Qmult_le_r with (z := proj1_sig (twopower y)).
   (* Now trying to show that 0 < proj1_sig (...), but that
      should be immediate. *)
@@ -268,14 +263,12 @@ Qed.
 Lemma abs_nonzero (x : Q) : ~(0 == x)  -> 0 < Qabs x.
 Proof.
   apply Qabs_case; intros.
-  SearchAbout (~(_ == _)).
   now apply le_not_eq.
 
   apply rhs_negative_lt.
   setoid_replace (-0) with 0.
   apply le_not_eq. easy. contradict H0. now symmetry.
 
-  Locate "-".
   unfold Qopp.
   simpl.
   easy.
@@ -286,8 +279,6 @@ Proof.
   apply Qabs_case; intros; intro; now rewrite <- H1 in H0.
 Qed.
 
-Check binade.
-Check exist.
 
 Definition binadeQ (x : Q) (x_nonzero : ~(0 == x)) : Z.
   refine (binade (exist _ (Qabs x) _)).
@@ -306,15 +297,12 @@ Defined.
 
 (* Analog of the binade-twopower adjunction results. *)
 
-SearchAbout binade.
-
 Lemma twopowerQ_binadeQ_le (n : Z) (q : Q) (q_nonzero : nonzero q) :
   twopowerQ n <= Qabs q  <->  (n <= binadeQ q q_nonzero)%Z.
 Proof.
   unfold twopowerQ, binadeQ; now rewrite <- twopower_binade_le.
 Qed.
 
-SearchAbout binade.
 Lemma twopowerQ_binadeQ_lt (n : Z) (q : Q) (q_nonzero: nonzero q) :
   (binadeQ q q_nonzero < n)%Z  <->  Qabs q < twopowerQ n.
 Proof.
@@ -344,13 +332,11 @@ Proof.
   destruct H0.
   exists (x + x0).
   split.
-  SearchAbout (is_integer (_ + _)).
   now apply is_integer_add.
   destruct H.
   destruct H0.
   rewrite H1.
   rewrite H2.
-  SearchAbout ((_ + _) * _).
   symmetry.
   apply Qmult_plus_distr_l.
 Qed.
@@ -431,9 +417,7 @@ Proof.
 
   assert (Qabs x < 1).
   rewrite x_is_a_by_m.
-  SearchAbout (Qabs (_ / _)).
   rewrite Qabs_div.
-  SearchAbout (_ / _ < _).
   apply Qlt_shift_div_r.
   now rewrite m_positive2.
 
@@ -454,7 +438,6 @@ Proof.
   split.
   apply is_integer_twopower.
   omega.
-  SearchAbout twopowerQ.
   rewrite twopowerQ_mul.
   now replace (n - m + m)%Z with n by ring.
 Qed.
@@ -548,7 +531,6 @@ Proof.
   unfold nonzero.
   intro.
   rewrite <- H in x_is_m_2e.
-  SearchAbout (0 * _)%Q.
   rewrite Qmult_0_l in x_is_m_2e.
   apply x_nonzero.
   easy.
@@ -570,24 +552,19 @@ Proof.
 
   exists (inject_Z m * twopowerQ ('p - 1 - binadeQ (inject_Z m) m_nonzero)).
   split.
-  SearchAbout is_integer.
   apply is_integer_mul.
   apply is_integer_inject_Z.
-  SearchAbout is_integer.
   apply is_integer_twopower.
 
   assert (binadeQ (inject_Z m) m_nonzero < 'p)%Z.
   unfold binadeQ.
   set (mpos := exist _ (Qabs (inject_Z m)) (abs_nonzero (inject_Z m) m_nonzero)).
-  SearchAbout (binade _ < _)%Z.
   apply twopower_binade_lt.
 
   assert (Qabs (inject_Z m) < twopowerQ ('p)).
-  SearchAbout (Qabs (inject_Z _)).
   rewrite Qabs_Zabs.
 
   rewrite twopowerQ_twopower_nonneg.
-  Check Zlt_Qlt.
   now rewrite <- Zlt_Qlt.
   easy.
   
@@ -600,9 +577,7 @@ Proof.
   (* Current goal should follow from H0 by simple arithmetic. *)
   omega.
 
-  SearchAbout (_ * _ * _).
   rewrite <- Qmult_assoc.
-  SearchAbout (twopowerQ _ * twopowerQ _).
   rewrite twopowerQ_mul.
   replace ('p - 1 - binadeQ (inject_Z m) m_nonzero + (binadeQ (inject_Z m) m_nonzero + e - 'p + 1))%Z with e by ring.
   reflexivity.
@@ -661,12 +636,10 @@ Proof.
   unfold twopowerQ.
 
   assert (inject_Z (Z.abs x0) < inject_Z (2 ^ 'p)).
-  Check Zlt_Qlt.
   now rewrite <- Zlt_Qlt.
   assert (inject_Z (2^ 'p) == proj1_sig (twopower (' p))).
 
   assert (inject_Z (Z.abs x0) < inject_Z (2 ^ 'p)).
-  Check Zlt_Qlt.
   now rewrite <- Zlt_Qlt.
   assert (inject_Z (2^ 'p) == proj1_sig (twopower (' p))).
 
@@ -698,7 +671,6 @@ Proof.
   intro.
   destruct H.
   rewrite <- H.
-  Check Zle_Qle.
   rewrite <- Zle_Qle.
   apply floor_spec.
   rewrite H. easy.
@@ -709,9 +681,7 @@ Lemma rhs_negative_le (x y : Q) : x <= -y -> y <= -x.
 Proof.
   intro.
   setoid_replace y with (- - y).
-  SearchAbout (- _ <= - _).
   now rewrite <- Qopp_le_mono.
-  SearchAbout (- - _).
   symmetry. auto with qarith.
   apply Qopp_opp.
 Qed.
@@ -737,14 +707,10 @@ Proof.
   
   (* case x <= 0 <= y *)
   apply Qle_trans with (y := 0).
-  SearchAbout (- _ <= - _).
   apply Qopp_le_mono.
   replace (- 0) with 0 by auto.
   apply Qle_trans with (y := y). easy.
-  SearchAbout (- inject_Z _).
   rewrite <- inject_Z_opp.
-  SearchAbout (- (floor _))%Z.
-  SearchAbout ceiling.
   rewrite neg_floor_is_ceiling_neg.
   assert (- - x == x).
   apply Qopp_involutive.
@@ -753,7 +719,6 @@ Proof.
   easy.
 
   (* case x <= 0, y <= 0 *)
-  SearchAbout (_ <= - _).
   apply rhs_negative_le.
   rewrite <- inject_Z_opp.
   rewrite neg_floor_is_ceiling_neg.
@@ -807,13 +772,11 @@ Proof.
      So 2^(q+r-1) <= |z|. *)
   (* Want to use Qle_trans, with y := ... *)
   assert (twopower ('r-1) <= twopower ('q + 'r - 1))%QPos.
-  SearchAbout (twopower _ <= twopower _)%QPos.
   apply twopower_monotonic_le.
   apply Z.sub_le_mono.
   assert (0 <= 'q)%Z.
   auto with zarith.
   replace ('r) with (0 + 'r)%Z at 1.
-  SearchAbout (_ + _ <= _ + _)%Z.
   apply Zplus_le_compat_r.
   assumption.
   auto with zarith.
@@ -1007,7 +970,6 @@ Qed.
 
 Lemma binade_z_large : (c <= binadeQ (proj1_sig z) z_nonzero)%Z.
 Proof.
-  SearchAbout (_ <= binadeQ _ _)%Z.
   apply twopowerQ_binadeQ_le.
   apply Qle_trans with (y := inject_Z (floor (Qabs x_over_y))).
   apply le_floor.
@@ -1031,15 +993,12 @@ Qed.
 Lemma z_is_multiple_of_ulp_x_over_y :
   is_multiple_of (twopowerQ (c - 'r + 1)) (proj1_sig z).
 Proof.
-  SearchAbout is_multiple_of.
   apply is_multiple_of_transitive with (
     b := twopowerQ (binadeQ (proj1_sig z) z_nonzero - 'r + 1)).
-  SearchAbout is_multiple_of.
   apply is_multiple_of_twopower.
   assert (c <= binadeQ (proj1_sig z) z_nonzero)%Z by (apply binade_z_large).
   omega.
 
-  SearchAbout is_multiple_of.
   apply is_multiple_of_ulp.
 Qed.
 
@@ -1050,7 +1009,6 @@ Proof.
   apply is_multiple_of_transitive with (
     b := twopowerQ (b - 'q + 1) * twopowerQ (c - 'r + 1)).
   unfold quantum.
-  SearchAbout twopowerQ.
   setoid_rewrite twopowerQ_mul.
   apply is_multiple_of_twopower.
   (* need that q + r <= c + 1 *)
@@ -1104,7 +1062,6 @@ Lemma x_minus_yz_small :
   Qabs (proj1_sig x - (proj1_sig y) * (proj1_sig z)) < quantum.
 Proof.
   apply Qlt_trans with (y := Qabs (proj1_sig y)).
-  SearchAbout (_ * _ < _ * _).
   rewrite <- Qmult_lt_r with (z := / Qabs (proj1_sig y)).
   field_simplify.
   rewrite <- Qabs_div.
@@ -1113,20 +1070,13 @@ Proof.
   apply x_over_y_minus_z_small.
   intro. apply y_nonzero. easy.
   assumption.
-  SearchAbout (nonzero (Qabs _)).
-  SearchAbout (~(0 == Qabs _)).
-  SearchAbout (0 == Qabs _).
   intro. apply y_nonzero. apply Qabs_zero. easy.
   intro. apply y_nonzero. apply Qabs_zero. easy.
-  SearchAbout (0 < / _).
   apply Qinv_lt_0_compat.
-  SearchAbout (0 < Qabs _).
   apply abs_nonzero.
   assumption.
 
   subst quantum.
-  SearchAbout (_ < twopowerQ _).
-  Check twopowerQ_binadeQ_lt.
   apply (twopowerQ_binadeQ_lt (b + 1) (proj1_sig y) (y_nonzero)).
   subst b.
   omega.
@@ -1149,7 +1099,6 @@ Qed.
 Lemma z_is_x_over_y : x_over_y == proj1_sig z.
 Proof.
   unfold x_over_y.
-  SearchAbout (_ / _ == _).
   apply Qdiv_mul.
   easy.
   rewrite Qmult_comm.
@@ -1164,3 +1113,5 @@ Proof.
 Qed.
 
 End FloorDivision.
+
+Check x_over_y_integral.
