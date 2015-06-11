@@ -1063,9 +1063,8 @@ Proof.
 Qed.
 
 Lemma x_minus_yz_is_quantized :
-  is_multiple_of quantum (Qabs ((proj1_sig x) - (proj1_sig y)*(proj1_sig z))).
+  is_multiple_of quantum ((proj1_sig x) - (proj1_sig y)*(proj1_sig z)).
 Proof.
-  apply is_multiple_of_abs.
   apply is_multiple_of_sub.
   apply x_is_quantized.
   apply yz_is_quantized.
@@ -1134,12 +1133,34 @@ Proof.
 Qed.
 
 
+Lemma x_is_yz : proj1_sig y * proj1_sig z == proj1_sig x.
+Proof.
+  apply Qplus_inj_r with (z := -(proj1_sig y * proj1_sig z)).
+  ring_simplify.
+  setoid_replace ((-1 # 1) * proj1_sig y * proj1_sig z + proj1_sig x) with
+    (proj1_sig x - proj1_sig y * proj1_sig z) by ring.
+  symmetry.
+  apply small_multiple_is_zero with (m := quantum).
+  apply x_minus_yz_is_quantized.
+  apply x_minus_yz_small.
+Qed.
 
-  
 
+Lemma z_is_x_over_y : x_over_y == proj1_sig z.
+Proof.
+  unfold x_over_y.
+  SearchAbout (_ / _ == _).
+  apply Qdiv_mul.
+  easy.
+  rewrite Qmult_comm.
+  now rewrite x_is_yz.
+Qed.
 
 
 Lemma x_over_y_integral : is_integer x_over_y.
 Proof.
-  (* TBD *)
+  rewrite z_is_x_over_y.
+  apply z_integral.
 Qed.
+
+End FloorDivision.
