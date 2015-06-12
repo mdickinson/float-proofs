@@ -69,6 +69,11 @@ Proof.
   auto with qarith.
 Qed.
 
+Lemma Qeq_le_incl (a b : Q) : a == b -> a <= b.
+Proof.
+  intro H; rewrite H; apply Qle_refl.
+Qed.
+
 (* Define the floor function, and prove its characteristic property. *)
 
 Definition floor (x : Q) : Z := (Qnum x / ' Qden x)%Z.
@@ -253,6 +258,13 @@ Proof.
   unfold is_integer; split; intro H;
   [destruct H as [n H]; rewrite <- H; now rewrite floor_inject |
   now exists (floor q) ].
+Qed.
+
+Lemma integer_le_floor (x y : Q) :
+  is_integer x -> x <= y -> x <= inject_Z (floor y).
+Proof.
+  unfold is_integer; intro H; destruct H as [m H]; rewrite <- H;
+  intro; rewrite <- Zle_Qle; now apply floor_spec.
 Qed.
 
 Lemma ceiling_integer (q : Q) : is_integer q <-> inject_Z (ceiling q) == q.

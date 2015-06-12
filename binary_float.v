@@ -661,22 +661,6 @@ Proof.
 Qed.
 
 
-Lemma le_floor (x y : Q) :
-  x <= y  ->
-  is_integer x ->
-  x <= inject_Z (floor y).
-Proof.
-  intro x_le_y.
-  unfold is_integer.
-  intro.
-  destruct H.
-  rewrite <- H.
-  rewrite <- Zle_Qle.
-  apply floor_spec.
-  rewrite H. easy.
-Qed.
-
-
 Lemma rhs_negative_le (x y : Q) : x <= -y -> y <= -x.
 Proof.
   intro.
@@ -787,13 +771,13 @@ Proof.
   clear H.
 
   apply Qle_trans with (y := inject_Z (floor (Qabs x_over_y))).
-  apply le_floor. easy.
+  apply integer_le_floor.
   apply is_integer_twopower.
-  assert (1 <= 'q)%Z.
-  apply Pos.le_1_l.
+  assert (1 <= 'q)%Z by apply Pos.le_1_l.
   assert (1 <= 'r)%Z by apply Pos.le_1_l.
   auto with zarith.
-  apply abs_floor. easy.
+  easy.
+  now apply abs_floor.
 Qed.
 
 (* Now we show that both x and y*z are integral multiples of 2^(b+1),
@@ -961,10 +945,10 @@ Proof.
   replace 0 with (inject_Z 0) by (now compute).
   apply Qlt_le_trans with (y := twopowerQ ('q + 'r - 1)).
   apply twopowerQ_positive.
-  apply le_floor.
-  assumption.
+  apply integer_le_floor.
   apply is_integer_twopower.
   assert (0 < 'q)%Z by easy; assert (0 < 'r)%Z by easy; omega.
+  easy.
   now apply abs_floor.
 Qed.
 
@@ -972,21 +956,21 @@ Lemma binade_z_large : (c <= binadeQ (proj1_sig z) z_nonzero)%Z.
 Proof.
   apply twopowerQ_binadeQ_le.
   apply Qle_trans with (y := inject_Z (floor (Qabs x_over_y))).
-  apply le_floor.
-
-  apply (twopowerQ_binadeQ_le c (x_over_y) x_over_y_nonzero).
-  subst c.
-  auto with zarith.
+  apply integer_le_floor.
 
   (* Now showing that 2^c is integral. *)
   apply is_integer_twopower.
-  
   subst c.
   apply twopowerQ_binadeQ_le.
   apply Qle_trans with (y := twopowerQ ('q + 'r - 1)).
   apply twopowerQ_monotonic_le.
   assert (0 < 'q)%Z by easy; assert (0 < 'r)%Z by easy; omega.
-  assumption.
+  easy.
+
+  apply (twopowerQ_binadeQ_le c (x_over_y) x_over_y_nonzero).
+  subst c.
+  auto with zarith.
+
   now apply abs_floor.
 Qed.
 
