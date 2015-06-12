@@ -263,11 +263,11 @@ Qed.
 Lemma abs_nonzero (x : Q) : ~(0 == x)  -> 0 < Qabs x.
 Proof.
   apply Qabs_case; intros.
-  now apply le_not_eq.
+  now apply Qle_not_eq.
 
   apply rhs_negative_lt.
   setoid_replace (-0) with 0.
-  apply le_not_eq. easy. contradict H0. now symmetry.
+  apply Qle_not_eq. easy. contradict H0. now symmetry.
 
   unfold Qopp.
   simpl.
