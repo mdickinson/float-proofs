@@ -6,31 +6,14 @@ Require Import ZArith.
 Require Import QArith.
 Require Import Qabs.
 
-Open Scope Z.
+(* Helper lemmas that we'll need later in the module. *)
 
 Lemma negate_iff : forall P Q, (P <-> Q)  ->  (~P <-> ~Q).
 Proof.
   tauto.
 Qed.
 
-(* Pure integer versions of the specification for floor. *)
-
-Lemma floor_spec_Z (a b n : Z) : 0 < b -> (n * b <= a  <->  n <= a / b).
-Proof.
-  intro; rewrite Z.mul_comm; split; intro;
-    [ now apply Z.div_le_lower_bound |
-    apply Z.le_trans with (m := b * (a / b));
-      [apply Z.mul_le_mono_pos_l | apply Z.mul_div_le]; easy].
-Qed.
-
-Lemma floor_spec_Z_lt (a b n : Z) : (0 < b) -> (a < n * b  <->  a / b < n).
-Proof.
-  setoid_replace (a < n * b) with (~ n * b <= a) by (split; auto with zarith);
-  setoid_replace (a / b < n) with (~ n <= a / b) by (split; auto with zarith);
-  intro; apply negate_iff; now apply floor_spec_Z.
-Qed.
-
-(* Other Z-based helper lemmas. *)
+Open Scope Z.
 
 Lemma Zle_sign_flip_l (a b : Z) : -a <= b -> -b <= a.
 Proof.
@@ -43,8 +26,6 @@ Proof.
 Qed.
 
 Open Scope Q.
-
-(* Some Q-based helper lemmas that we'll need later. *)
 
 Notation "x <= y < z" := (x <= y /\ y < z) : Q_scope.
 
@@ -74,23 +55,49 @@ Proof.
   intro H; rewrite H; apply Qle_refl.
 Qed.
 
-(* Define the floor function, and prove its characteristic property. *)
+(* The floor function can be defined in terms of the standard library
+   / operator, which does Euclidean division. *)
 
-Definition floor (x : Q) : Z := (Qnum x / ' Qden x)%Z.
+Open Scope Z.
 
-(* We'll give three distinct characterisations of the floor function.
+Definition floor (x : Q) : Z := (Qnum x / ' Qden x).
 
-   First, it's an adjoint to the inclusion of Z into Q. *)
+(* To prove the main specification theorem for floor, we first need
+   to prove a corresponding theorem at integer level. *)
+
+Lemma floor_spec_Z (a b n : Z) : 0 < b -> (n * b <= a  <->  n <= a / b).
+Proof.
+  intro; rewrite Z.mul_comm; split; intro;
+    [ now apply Z.div_le_lower_bound |
+    apply Z.le_trans with (m := b * (a / b));
+      [apply Z.mul_le_mono_pos_l | apply Z.mul_div_le]; easy].
+Qed.
+
+(* Here's a trivially-equivalent variant based on < rather than <=. *)
+
+Lemma floor_spec_Z_lt (a b n : Z) : (0 < b) -> (a < n * b  <->  a / b < n).
+Proof.
+  intro; repeat rewrite Z.lt_nge; apply negate_iff; now apply floor_spec_Z.
+Qed.
+
+(* Now we're in a position to give a lemma that complete characterises
+   the floor function.  In fact, we'll give three distinct characterisations.
+
+   To begin with, it's an adjoint to the inclusion of Z into Q.
+ *)
+
+Open Scope Q.
 
 Lemma floor_spec (x : Q) (n : Z) : inject_Z n <= x  <->  (n <= floor x)%Z.
 Proof.
   unfold Qle; rewrite Z.mul_1_r; apply floor_spec_Z; apply Pos2Z.is_pos.
 Qed.
 
-(* It's much easier to prove that "floor" is a setoid morphism
+(* It's easier to prove that "floor" is a setoid morphism
    using "floor_spec" than using the definition directly. *)
 
 Add Morphism floor : floor_morphism.
+Proof.
   intros x y x_eq_y; apply Z.le_antisymm; apply floor_spec;
   [ rewrite <- x_eq_y | rewrite x_eq_y ]; apply floor_spec; apply Z.le_refl.
 Qed.
@@ -115,7 +122,7 @@ Proof.
     split; [apply floor_spec | apply floor_spec_lt]; auto with zarith
   |
     apply Z.le_antisymm;
-    [ apply floor_spec | apply Zlt_succ_le; apply floor_spec_lt]; tauto
+    [ apply floor_spec | apply Zlt_succ_le; apply floor_spec_lt]; easy
   ].
 Qed.
 
