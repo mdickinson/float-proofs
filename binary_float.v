@@ -12,11 +12,6 @@ Open Scope Q.
 
 (* Some remedial lemmas. *)
 
-Lemma pos_lt_Z_lt (p q : positive) : (p < q)%positive  ->  ('p < 'q)%Z.
-Proof.
-  easy.
-Qed.
-
 Lemma lt_sum_is_diff_lt (a b c : Q) : a < b + c  <->  a - c < b.
 Proof.
   split; intro.
@@ -799,7 +794,7 @@ Section FirstSeparationTheorem.
 (* Let's take just one of the cases of the theorem, the case where p < q + r
    and abs(x / y) >= twopower (q + r - 1). *)
 
-Hypothesis p_small : (p < q + r)%positive.
+Hypothesis p_small : ('p < 'q + 'r)%Z.
 
 Hypothesis x_over_y_large :
   twopowerQ ('q + 'r - 1) <= Qabs x_over_y.
@@ -964,10 +959,8 @@ Proof.
 
   assert ('p <= a - b)%Z.
   apply Z.le_trans with (m := ('q + 'r - 1)%Z).
-  apply Z.lt_le_pred.
-  rewrite <- Pos2Z.inj_add.
+  now apply Z.lt_le_pred.
 
-  now apply pos_lt_Z_lt.
   apply a_minus_b_large_le.
   replace (binadeQ (proj1_sig x) x_nonzero) with a by easy.
   omega.
