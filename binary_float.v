@@ -31,7 +31,7 @@ Proof.
   setoid_replace (-c + (b + c)) with b by ring.
   easy.
 Qed.
-  
+
 (* Want that a < b + c  <->  a - b < c. *)
 Definition nonzero (x : Q) := ~(0 == x).
 
@@ -49,7 +49,7 @@ Proof.
   easy.
 Qed.
 
-  
+
 Lemma nonzero_qpos (q : QPos) : nonzero (proj1_sig q).
 Proof.
   destruct q; simpl.
@@ -58,7 +58,7 @@ Proof.
   compute. easy.
 Qed.
 
-  
+
 Lemma Qdiv_mul (a b c : Q) :
   (~ 0 == b) ->  (a / b == c  <->  a == c * b).
 Proof.
@@ -186,9 +186,9 @@ Proof.
   setoid_replace (inject_Z 0 - 1) with (- (1)) by ring.
   assert (-(1) < x) by (now apply Qneg_le).
   auto.
-Qed.  
+Qed.
 
-  
+
 Lemma is_integer_twopower (x : Z) :
   (0 <= x)%Z -> is_integer (proj1_sig (twopower x)).
 Proof.
@@ -199,7 +199,7 @@ Qed.
 
 (* Now we can define the subsets of binary floats of various precisions. *)
 Definition binary_float (p : positive) :=
-  { x : Q | representable_in_precision p x}. 
+  { x : Q | representable_in_precision p x}.
 
 (* Large binary floats are integral: a precision-p float that's
    larger than 2**(p-1) must be an integer. *)
@@ -253,7 +253,7 @@ Proof.
   easy.
   easy.
 Qed.
-  
+
 Lemma rhs_negative_lt (x y : Q) : x < -y -> y < -x.
 Proof.
   intro.
@@ -347,14 +347,14 @@ Proof.
   rewrite H0.
   ring.
 Qed.
-  
+
 
 Lemma is_multiple_of_abs (m a : Q) :
   is_multiple_of m a -> is_multiple_of m (Qabs a).
 Proof.
   apply Qabs_case; intros; [ easy | now apply is_multiple_of_neg].
 Qed.
-  
+
 Lemma is_multiple_of_sub (m a b : Q) :
   is_multiple_of m a -> is_multiple_of m b -> is_multiple_of m (a - b).
 Proof.
@@ -374,7 +374,7 @@ Proof.
   rewrite (proj2 c_divides_d).
   ring.
 Qed.
-  
+
 
 Lemma is_multiple_of_transitive (a b c : Q):
   is_multiple_of a b -> is_multiple_of b c -> is_multiple_of a c.
@@ -392,7 +392,7 @@ Proof.
   unfold is_multiple_of.
   intros a_multiple a_bounded.
   assert (0 < m) as m_positive by (apply Qle_lt_trans with (y := Qabs a); [apply Qabs_nonneg | easy]).
-  
+
   assert (Qabs m == m) as m_positive2 by (apply Qabs_pos; now apply Qlt_le_weak).
 
   assert (~ m == 0) as m_nonzero.
@@ -466,7 +466,7 @@ Proof.
   apply Z.le_refl.
 Qed.
 
-  
+
 Lemma binadeQ_for_twopower_multiple (e : Z) (x : Q)
   (x_nonzero : nonzero x) (y : Q) (y_nonzero: nonzero y) :
   y == twopowerQ e * x  ->  (binadeQ y y_nonzero = e + binadeQ x x_nonzero)%Z.
@@ -487,7 +487,7 @@ Proof.
   rewrite H0.
   rewrite H.
   apply Qabs_Qmult.
-  
+
   assert (ypos == twopower e * xpos)%QPos.
   unfold QPos.eq.
   assert (twopowerQ e == inject_Z 2 ^ e) by easy.
@@ -562,13 +562,13 @@ Proof.
   rewrite twopowerQ_twopower_nonneg.
   now rewrite <- Zlt_Qlt.
   easy.
-  
+
   unfold QPos.lt.
   assert (proj1_sig mpos == Qabs (inject_Z m)).
   easy.
   rewrite H1.
   assumption.
-  
+
   (* Current goal should follow from H0 by simple arithmetic. *)
   omega.
 
@@ -621,7 +621,7 @@ Proof.
   rewrite Qabs_twopower in H1.
   (* Now we've got a statement of the form 2^e <= m * 2^f, and
      we want to turn it into a statement of the form 2^(e-f) <= m. *)
-  
+
   assert (-1 < x1)%Z.
 
   assert (twopowerQ (' p - 1 - x1) <= inject_Z (Z.abs x0)).
@@ -639,7 +639,7 @@ Proof.
   assert (inject_Z (2^ 'p) == proj1_sig (twopower (' p))).
 
   rewrite Qpower.Zpower_Qpower.
-  
+
   easy.
   easy.
   easy.
@@ -648,7 +648,7 @@ Proof.
 
   assert (twopowerQ ('p - 1 - x1) < twopowerQ ('p)).
   now apply Qle_lt_trans with (y := inject_Z (Z.abs x0)).
-  
+
   assert ('p - 1 - x1 < ' p)%Z.
   now apply twopower_injective_lt.
   auto with zarith.
@@ -683,7 +683,7 @@ Proof.
   easy.
   replace 0 with (- 0) by auto.
   apply Qopp_le_compat; easy.
-  
+
   (* case x <= 0 <= y *)
   apply Qle_trans with (y := 0).
   apply Qopp_le_mono.
@@ -705,10 +705,12 @@ Proof.
   easy.
   apply Qopp_involutive.
 Qed.
-  
-Section FirstSeparationTheorem.
 
-(* Let's try to prove a theorem. *)
+
+Section SeparationTheorems.
+
+(* In this section we assemble the hypotheses and results common to
+   both separation theorems. *)
 
 (* We start with x, y and z floating-point numbers of precisions p, q and r
    respectively. *)
@@ -718,14 +720,81 @@ Variable x : binary_float p.
 Variable y : binary_float q.
 Variable z : binary_float r.
 
-(* Next, we assume that x and y are nonzero and that floor(x/y) <= z <= ceiling(x/y). *)
+(* Next, we assume that x and y are nonzero, and deduce that x/y is, too. *)
 
 Hypothesis x_nonzero : ~ 0 == proj1_sig x.
 Hypothesis y_nonzero : ~ 0 == proj1_sig y.
 
 Let x_over_y := proj1_sig x / proj1_sig y.
 
-Hypothesis z_bounds : inject_Z (floor x_over_y) <= proj1_sig z <= inject_Z (ceiling x_over_y).
+Lemma x_over_y_nonzero : nonzero x_over_y.
+Proof.
+  now apply nonzero_div.
+Qed.
+
+(* We assume that floor(x/y) <= z <= ceiling(x/y). *)
+
+Hypothesis z_bounds : floorQ x_over_y <= proj1_sig z <= ceilingQ x_over_y.
+
+(* We introduce the binades of x, y and z as separate variables. *)
+
+Let a := binadeQ (proj1_sig x) x_nonzero.
+Let b := binadeQ (proj1_sig y) y_nonzero.
+Let c := binadeQ x_over_y x_over_y_nonzero.
+
+(* We'll show that x and y*z are both multiples of quantum. *)
+
+Let quantum := twopowerQ (b + 1).
+
+Lemma x_over_y_minus_z_small : Qabs (x_over_y - proj1_sig z) < 1.
+Proof.
+  (* Split: show x/y - z < 1 and z - x/y < 1. *)
+  apply Qabs_case; intro.
+
+  (* To show: x/y - z < 1. *)
+  apply lt_sum_is_diff_lt.
+  rewrite Qplus_comm.
+  apply lt_sum_is_diff_lt.
+  apply Qlt_le_trans with (y := inject_Z (floor x_over_y)).
+  apply lt_sum_is_diff_lt.
+  now apply floor_spec_alt.
+  apply z_bounds.
+
+  setoid_replace (-(x_over_y - proj1_sig z)) with (proj1_sig z - x_over_y) by ring.
+  apply lt_sum_is_diff_lt.
+  apply Qle_lt_trans with (y := inject_Z (ceiling x_over_y)).
+  apply z_bounds.
+  rewrite Qplus_comm.
+  apply lt_sum_is_diff_lt.
+  now apply ceiling_spec_alt.
+Qed.
+
+Lemma x_minus_yz_small :
+  Qabs (proj1_sig x - (proj1_sig y) * (proj1_sig z)) < quantum.
+Proof.
+  apply Qlt_trans with (y := Qabs (proj1_sig y)).
+  rewrite <- Qmult_lt_r with (z := / Qabs (proj1_sig y)).
+  field_simplify.
+  rewrite <- Qabs_div.
+  setoid_replace ((proj1_sig x - proj1_sig y * proj1_sig z) / proj1_sig y)
+    with (proj1_sig x / proj1_sig y - proj1_sig z) by field.
+  apply x_over_y_minus_z_small.
+  intro. apply y_nonzero. easy.
+  assumption.
+  intro. apply y_nonzero. apply Qabs_zero. easy.
+  intro. apply y_nonzero. apply Qabs_zero. easy.
+  apply Qinv_lt_0_compat.
+  apply abs_nonzero.
+  assumption.
+
+  subst quantum.
+  apply (twopowerQ_binadeQ_lt (b + 1) (proj1_sig y) (y_nonzero)).
+  subst b.
+  omega.
+Qed.
+
+
+Section FirstSeparationTheorem.
 
 (* Let's take just one of the cases of the theorem, the case where p < q + r
    and abs(x / y) >= twopower (q + r - 1). *)
@@ -777,16 +846,6 @@ Qed.
 
 (* Now we show that both x and y*z are integral multiples of 2^(b+1),
    where b is the binade of y. *)
-
-Lemma x_over_y_nonzero : nonzero x_over_y.
-Proof.
-  now apply nonzero_div.
-Qed.
-  
-
-Let a := binadeQ (proj1_sig x) x_nonzero.
-Let b := binadeQ (proj1_sig y) y_nonzero.
-Let c := binadeQ x_over_y x_over_y_nonzero.
 
 (* From our assumption that x/y is large, we have:
 
@@ -891,13 +950,9 @@ Proof.
 Qed.
 
 
-(* We'll show that x and y*z are both multiples of quantum. *)
-
-Let quantum := twopowerQ (b + 1).
+(* Showing that x is a multiple of quantum. *)
 
 Let ulp_x := ulp _ x (x_nonzero).
-
-(* Showing that x is a multiple of quantum. *)
 
 Lemma x_is_quantized : is_multiple_of quantum (proj1_sig x).
 Proof.
@@ -1006,61 +1061,12 @@ Proof.
   apply x_is_quantized.
   apply yz_is_quantized.
 Qed.
-  
+
 (* Okay, great: now we know that x - y*z is a multiple of 2^(b+1).
    Next we show that |x - y*z| < 2^(b+1), and then go on to deduce
    that x == y*z.
 
    But |x/y - z| < 1, so |x - y*z| < |y| < 2^(b+1).  Done! *)
-
-Lemma x_over_y_minus_z_small : Qabs (x_over_y - proj1_sig z) < 1.
-Proof.
-  (* Split: show x/y - z < 1 and z - x/y < 1. *)
-  apply Qabs_case; intro.
-
-  (* To show: x/y - z < 1. *)
-  apply lt_sum_is_diff_lt.
-  rewrite Qplus_comm.
-  apply lt_sum_is_diff_lt.
-  apply Qlt_le_trans with (y := inject_Z (floor x_over_y)).
-  apply lt_sum_is_diff_lt.
-  now apply floor_spec_alt.
-  apply z_bounds.
-
-  setoid_replace (-(x_over_y - proj1_sig z)) with (proj1_sig z - x_over_y) by ring.
-  apply lt_sum_is_diff_lt.
-  apply Qle_lt_trans with (y := inject_Z (ceiling x_over_y)).
-  apply z_bounds.
-  rewrite Qplus_comm.
-  apply lt_sum_is_diff_lt.
-  now apply ceiling_spec_alt.
-Qed.
-  
-
-Lemma x_minus_yz_small :
-  Qabs (proj1_sig x - (proj1_sig y) * (proj1_sig z)) < quantum.
-Proof.
-  apply Qlt_trans with (y := Qabs (proj1_sig y)).
-  rewrite <- Qmult_lt_r with (z := / Qabs (proj1_sig y)).
-  field_simplify.
-  rewrite <- Qabs_div.
-  setoid_replace ((proj1_sig x - proj1_sig y * proj1_sig z) / proj1_sig y)
-    with (proj1_sig x / proj1_sig y - proj1_sig z) by field.
-  apply x_over_y_minus_z_small.
-  intro. apply y_nonzero. easy.
-  assumption.
-  intro. apply y_nonzero. apply Qabs_zero. easy.
-  intro. apply y_nonzero. apply Qabs_zero. easy.
-  apply Qinv_lt_0_compat.
-  apply abs_nonzero.
-  assumption.
-
-  subst quantum.
-  apply (twopowerQ_binadeQ_lt (b + 1) (proj1_sig y) (y_nonzero)).
-  subst b.
-  omega.
-Qed.
-
 
 Lemma x_is_yz : proj1_sig y * proj1_sig z == proj1_sig x.
 Proof.
@@ -1093,4 +1099,119 @@ Qed.
 
 End FirstSeparationTheorem.
 
+Section SecondSeparationTheorem.
+
+(* The second separation theorem applies to the case where p >= q + r. *)
+
+Hypothesis p_large : ('q + 'r <= 'p)%Z.
+
+Hypothesis x_over_y_large : ('p <= a - b)%Z.
+
+
+Lemma a_small : (a - b - 1 <= c)%Z.
+Proof.
+  subst a b c; unfold binadeQ;
+  remember (
+    exist (fun x0 : Q => (0 < x0)%Q) (Qabs x_over_y)
+    (abs_nonzero x_over_y x_over_y_nonzero)
+  ) as x_over_y_pos;
+  remember (
+    exist (fun x0 : Q => (0 < x0)%Q) (Qabs (proj1_sig x))
+    (abs_nonzero (proj1_sig x) x_nonzero)) as x_pos;
+  remember (
+    exist (fun x0 : Q => (0 < x0)%Q) (Qabs (proj1_sig y))
+    (abs_nonzero (proj1_sig y) y_nonzero)) as y_pos;
+  assert (x_over_y_pos == x_pos / y_pos)%QPos as H by (
+    unfold QPos.eq; rewrite Heqx_pos, Heqy_pos, Heqx_over_y_pos;
+    setoid_rewrite Qabs_div; easy); rewrite H; apply binade_div.
+Qed.
+
+
+Lemma z_large2 : twopowerQ c <= Qabs (proj1_sig z).
+Proof.
+  apply Qle_trans with (y := floorQ (Qabs x_over_y)).
+  apply integer_le_floor.
+  apply is_integer_twopower.
+  apply Z.le_trans with (m := ('p - 1)%Z).
+  assert (0 < 'p)%Z by easy; omega.
+  pose proof a_small; omega.
+  apply (twopowerQ_binadeQ_le c x_over_y x_over_y_nonzero).
+  apply Zle_refl.
+  now apply abs_floor.
+Qed.
+
+
+Lemma z_nonzero2 : ~ 0 == (proj1_sig z).
+Proof.
+  apply abs_nonzero_inv.
+  apply Qlt_le_trans with (y := twopowerQ c).
+  apply twopowerQ_positive.
+  apply z_large2.
+Qed.
+
+
+Lemma binade_z_large2 : (c <= binadeQ (proj1_sig z) z_nonzero2)%Z.
+Proof.
+  apply twopowerQ_binadeQ_le.
+  apply z_large2.
+Qed.
+
+
+Lemma x_is_quantized2 : is_multiple_of quantum (proj1_sig x).
+Proof.
+  apply is_multiple_of_transitive with (b := twopowerQ (a - 'p + 1)).
+  apply is_multiple_of_twopower; omega.
+  apply is_multiple_of_ulp.
+Qed.
+
+
+Lemma yz_is_quantized2 : is_multiple_of quantum (proj1_sig y * proj1_sig z).
+Proof.
+  apply is_multiple_of_transitive with (b := twopowerQ ((b - 'q + 1) + (
+    c - 'r + 1))).
+  apply is_multiple_of_twopower; pose proof a_small; omega.
+  rewrite <- twopowerQ_mul.
+  apply is_multiple_of_product.
+  apply is_multiple_of_ulp.
+  apply is_multiple_of_transitive with (
+    b := twopowerQ (binadeQ (proj1_sig z) z_nonzero2 - 'r + 1)).
+  apply is_multiple_of_twopower.
+  pose proof binade_z_large2. omega.
+  apply is_multiple_of_ulp.
+Qed.
+
+Lemma x_minus_yz_is_quantized2 :
+  is_multiple_of quantum ((proj1_sig x) - (proj1_sig y)*(proj1_sig z)).
+Proof.
+  apply is_multiple_of_sub.
+  apply x_is_quantized2.
+  apply yz_is_quantized2.
+Qed.
+
+Lemma x_is_yz2 : proj1_sig y * proj1_sig z == proj1_sig x.
+Proof.
+  apply Qplus_inj_r with (z := -(proj1_sig y * proj1_sig z)).
+  ring_simplify.
+  setoid_replace ((-1 # 1) * proj1_sig y * proj1_sig z + proj1_sig x) with
+    (proj1_sig x - proj1_sig y * proj1_sig z) by ring.
+  symmetry.
+  apply small_multiple_is_zero with (m := quantum).
+  apply x_minus_yz_is_quantized2.
+  apply x_minus_yz_small.
+Qed.
+
+Theorem second_separation_theorem : x_over_y == proj1_sig z.
+Proof.
+  unfold x_over_y.
+  apply Qdiv_mul.
+  easy.
+  rewrite Qmult_comm.
+  now rewrite x_is_yz2.
+Qed.
+
+End SecondSeparationTheorem.
+
+End SeparationTheorems.
+
 Check first_separation_theorem.
+Check second_separation_theorem.

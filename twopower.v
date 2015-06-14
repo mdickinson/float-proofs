@@ -354,3 +354,43 @@ Proof.
   rewrite QPos_lt_nge.
   split; intro H; contradict H; now apply twopower_binade_le.
 Qed.
+
+(* Relationship with multiplication. *)
+
+Theorem binade_one : (binade (1%QPos) = 0)%Z.
+Proof.
+  easy.
+Qed.
+
+Lemma mul_le p q r s : p <= q -> r <= s -> p*r <= q * s.
+Proof.
+  intros; apply QPos_le_trans with (b := q * r);
+  [apply QPos.mul_le_mono_r | apply QPos.mul_le_mono_l ]; easy.
+Qed.
+
+Lemma mul_lt p q r s : p < q -> r < s -> p*r < q*s.
+Proof.
+  intros; apply QPos_lt_trans with (b := q * r);
+  [apply QPos.mul_lt_mono_r | apply QPos.mul_lt_mono_l ]; easy.
+Qed.
+
+Theorem binade_mul x y :
+  (binade x + binade y <= binade (x * y)%QPos <= binade x + binade y + 1)%Z.
+Proof.
+  split;
+  [
+  apply twopower_binade_le; rewrite twopower_mul; apply mul_le
+  |
+  apply Zlt_succ_le; apply twopower_binade_lt;
+  replace (Z.succ (binade x + binade y + 1)) with
+  ((binade x + 1) + (binade y + 1))%Z by omega; rewrite twopower_mul;
+    apply mul_lt
+  ]; apply binade_bound.
+Qed.
+
+Theorem binade_div x y :
+  (binade x - binade y - 1 <= binade (x / y)%QPos <= binade x - binade y)%Z.
+Proof.
+  remember (x / y) as z; setoid_replace x with (x / y * y) by (symmetry;
+  apply QPos_div_mul); rewrite <- Heqz; pose proof (binade_mul z y); omega.
+Qed.

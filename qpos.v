@@ -440,10 +440,14 @@ Proof.
   destruct a, b, c; unfold QPos.le; QOrder.order.
 Qed.
 
-
 Lemma QPos_lt_le_trans a b c : a < b -> b <= c -> a < c.
 Proof.
   destruct a, b, c; unfold QPos.le, QPos.lt; apply Qlt_le_trans.
+Qed.
+
+Lemma QPos_lt_trans a b c : a < b -> b < c -> a < c.
+Proof.
+  destruct a, b, c; unfold QPos.lt; apply Qlt_trans.
 Qed.
 
 
