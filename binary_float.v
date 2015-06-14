@@ -1,6 +1,3 @@
-(* XXX To do: define floorQ as the composition of inject_Z and floor, and
-   use it everywhere.  Similarly for ceilingQ. *)
-
 (* Define subsets of the rationals representable as binary floats
    with various precisions. *)
 
@@ -124,6 +121,11 @@ Proof.
 Qed.
 
 
+Definition floorQ (q : Q) := inject_Z (floor q).
+
+Definition ceilingQ (q : Q) := inject_Z (ceiling q).
+
+
 Definition twopowerQ (x : Z): Q := proj1_sig (twopower x).
 
 Lemma twopowerQ_positive (p : Z) : 0 < twopowerQ p.
@@ -202,6 +204,7 @@ Definition binary_float (p : positive) :=
 (* Large binary floats are integral: a precision-p float that's
    larger than 2**(p-1) must be an integer. *)
 
+
 Lemma Qabs_Zabs (x : Z) : Qabs (inject_Z x) == inject_Z (Z.abs x).
 Proof.
   now unfold Qabs.
@@ -262,16 +265,8 @@ Qed.
 
 Lemma abs_nonzero (x : Q) : ~(0 == x)  -> 0 < Qabs x.
 Proof.
-  apply Qabs_case; intros.
-  now apply Qle_not_eq.
-
-  apply rhs_negative_lt.
-  setoid_replace (-0) with 0.
-  apply Qle_not_eq. easy. contradict H0. now symmetry.
-
-  unfold Qopp.
-  simpl.
-  easy.
+  intro; apply nonzero_and_nonneg_implies_positive;
+  [ contradict H; now apply Qabs_zero | apply Qabs_nonneg ].
 Qed.
 
 Lemma abs_nonzero_inv (x : Q) : 0 < Qabs x -> nonzero x.
@@ -711,7 +706,7 @@ Proof.
   apply Qopp_involutive.
 Qed.
   
-Section FloorDivision.
+Section FirstSeparationTheorem.
 
 (* Let's try to prove a theorem. *)
 
@@ -1080,7 +1075,7 @@ Proof.
 Qed.
 
 
-Lemma z_is_x_over_y : x_over_y == proj1_sig z.
+Theorem first_separation_theorem : x_over_y == proj1_sig z.
 Proof.
   unfold x_over_y.
   apply Qdiv_mul.
@@ -1092,10 +1087,10 @@ Qed.
 
 Lemma x_over_y_integral : is_integer x_over_y.
 Proof.
-  rewrite z_is_x_over_y.
+  rewrite first_separation_theorem.
   apply z_integral.
 Qed.
 
-End FloorDivision.
+End FirstSeparationTheorem.
 
-Check x_over_y_integral.
+Check first_separation_theorem.
