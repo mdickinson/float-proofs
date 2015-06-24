@@ -1294,9 +1294,6 @@ End SecondSeparationTheorem.
 
 End SeparationTheorems.
 
-Check first_separation_theorem.
-Check second_separation_theorem.
-
 Section RoundingForNonzero.
 
 (* The precision that we're going to round to, and the value that we're rounding. *)
@@ -1333,96 +1330,25 @@ Lemma _rounded_representable :
   representable_in_precision p _round_toward_negative_for_nonzero.
 Proof.
   apply (representable_le_bound _ (floor (x / scale)) shift).
-
-
-
-  apply Z.abs_case; [ solve_proper | |].
-  
-  SearchAbout (inject_Z _ <= inject_Z _).
-  rewrite Zle_Qle.
-  apply Qle_trans with (y := x / scale).
-  apply floor_spec, Z.le_refl.
-  
-  
-
-  SearchAbout (floorQ _ <= _).
+  apply abs_floor_le.
+  rewrite <- twopowerQ_twopower_pos.
+  apply scaled_x_bounded.
+Qed.
 
   
-  (* Showing that floor(x / scale) <= 2^p. *)
-  Check Z.le_trans.
-  SearchAbout (inject_Z).
-  
-  
-
-  SearchAbout Z.abs.
-  SearchAbout (Z.abs (floor _))%Z.
-  
-
-  unfold _round_toward_negative_for_nonzero.
-  exists (floor (x / scale)), shift.
-  split.
-  unfold floorQ.
-  replace (twopowerQ shift) with scale.
-  easy.
-  easy.
-  
-
-
-  
-
-
 End RoundingForNonzero.
 
-Check _round_toward_negative_for_nonzero.
-
-Definition round_toward_negative : (binary_float p).
+Definition round_toward_negative (p : positive) (x : Q) : (binary_float p).
   (* Define differently depending on whether 0 == x or not. *)
   case (Qeq_dec 0 x); intro H.
   (* Case 0 == x. *)
   refine (exist _ 0 _); exists 0%Z, 0%Z; intuition.
   (* Case 0 != x. *)
-  refine (exist _ (_round_toward_negative_for_nonzero H) _).
-  
-
-
-
-
-Check Qeq_dec 0.
-
-
-Definition construct_float (p : positive) (m e : Z)
-  (m_bounded : (Zabs m < 2 ^ 'p)%Z) : binary_float p.
-  refine (exist _ ((inject_Z m) * proj1_sig (twopower e)) _).
-  exists m, e. intuition.
-Qed.
-
-
-Definition zero_float (p : positive) : binary_float p.
-  refine (exist _ 0 _); exists (0%Z), (0%Z); intuition.
+  refine (exist _ (_round_toward_negative_for_nonzero p x H) _).
+  apply _rounded_representable.
 Defined.
 
-
-(* Definition of round down: for nonzero x, we want
-
-     round_down x = (floor (x / 2^p) * 2^p),
-
-   where p = binade x - r + 1.
-
-   Why?  1 <= x / 2^binade x < 2, so
-         2^(r-1) <= x / 2^p < 2^r.
-*)
-
-
-Definition round_down r (x : Q) : binary_float r.
-  case (Qeq_dec 0 x); intro.
-  (* Case 0 == x: return 0. *)
-  exact (zero_float r).
-  (* Case 0 != x: ... *)
-  Check let exp := binadeQ x n in floorQ (x / twopowerQ exp) * twopowerQ exp.
-  pose (exp := binadeQ x n).
-  refine (
-    construct_float r (floor (x / twopowerQ exp)) exp _).
-
-
-  Check binadeQ.
-  Check (binadeQ x n).
+(* Check some values. *)
+Eval compute in (proj1_sig (round_toward_negative 5 (1 # 3))).
+Eval compute in (proj1_sig (round_toward_negative 5 0)).
+Eval compute in (proj1_sig (round_toward_negative 53 (314159265358979323 # 100000000000000000))).
