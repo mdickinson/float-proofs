@@ -149,12 +149,7 @@ Proof.
 Qed.
 
 
-Definition representable_in_precision (p : positive) (x : Q) :=
-  exists (m : Z) (e : Z),
-    (x == (inject_Z m) * proj1_sig (twopower e)) /\
-    (Zabs m < 2 ^ 'p)%Z.
-
-(* Relationship between 2^ and twopower. *)
+(* Relationship between 2^_ and twopower. *)
 
 Lemma twopowerQ_twopower_nonneg (m : Z) :
   (0 <= m)%Z  ->  twopowerQ m == inject_Z (2 ^ m).
@@ -162,6 +157,106 @@ Proof.
   unfold twopowerQ. simpl. intro.
   symmetry.
   now apply Qpower.Zpower_Qpower.
+Qed.
+
+Lemma twopowerQ_twopower_pos (p : positive) :
+  twopowerQ ('p) == inject_Z (2 ^ 'p).
+Proof.
+  now apply twopowerQ_twopower_nonneg.
+Qed.
+
+Lemma twopowerQ_mul (x y : Z) :
+  twopowerQ x * twopowerQ y == twopowerQ (x + y).
+Proof.
+  unfold twopowerQ; simpl; now rewrite Qpower.Qpower_plus.
+Qed.
+
+
+Definition representable_in_precision (p : positive) (x : Q) :=
+  exists (m : Z) (e : Z),
+    (x == inject_Z m * twopowerQ e) /\
+    (Zabs m < 2 ^ 'p)%Z.
+
+Add Morphism representable_in_precision : representable_in_precision_morphism.
+Proof.
+  intros p x y x_eq_y; split; unfold representable_in_precision; intro H;
+    destruct H as [m H]; destruct H as [e H]; exists m, e;
+      [rewrite <- x_eq_y | rewrite x_eq_y ]; easy.
+Qed.
+
+(* We establish some basic properties. *)
+
+Lemma zero_is_representable (p : positive) :
+  representable_in_precision p 0.
+Proof.
+  exists 0%Z, 0%Z; split; [ now compute | now apply Z.pow_pos_nonneg ].
+Qed.
+
+Lemma one_is_representable (p : positive) :
+  representable_in_precision p 1.
+Proof.
+  exists 1%Z, 0%Z; split; [now compute | 
+  replace (Z.abs 1) with (2 ^ 0)%Z by easy; 
+  now apply Zpow_facts.Zpower_lt_monotone ].
+Qed.
+
+Lemma neg_representable_is_representable (p : positive) (x : Q) :
+  representable_in_precision p x -> representable_in_precision p (-x).
+Proof.
+  intro H; destruct H as [m H]; destruct H as [e H];
+  destruct H as [Hx Hm]; exists (-m)%Z, e;
+  split; [ rewrite Hx, inject_Z_opp; ring | now rewrite Z.abs_opp ].
+Qed.
+
+Lemma small_integers_are_representable (p : positive) (m : Z) :
+  (Zabs m < 2 ^ 'p)%Z -> representable_in_precision p (inject_Z m).
+Proof.
+  exists m, 0%Z; split; [ setoid_replace (twopowerQ 0) with 1 by easy; ring | easy].
+Qed.
+
+Lemma scaled_representable_is_representable (p : positive) (e : Z) (x : Q) :
+  representable_in_precision p x ->
+    representable_in_precision p (twopowerQ e * x).
+Proof.
+  intro H; destruct H as [m H]; destruct H as [e0 H]; destruct H as [Hx Hm];
+    exists m, (e + e0)%Z; split; [ setoid_rewrite <- twopowerQ_mul; rewrite Hx; ring
+      | easy].
+Qed.
+
+Lemma powers_of_two_are_representable (p : positive) (e : Z) :
+  representable_in_precision p (twopowerQ e).
+Proof.
+  setoid_replace (twopowerQ e) with (twopowerQ e * 1) by ring;
+  apply scaled_representable_is_representable, one_is_representable.
+Qed.
+
+Lemma small_integers_are_representable_le (p : positive) (m : Z) :
+  (Zabs m <= 2 ^ 'p)%Z -> representable_in_precision p (inject_Z m).
+Proof.
+  (* Split into cases |m| < 2^p and |m| = 2^p. *)
+  intro H; case (Z_le_lt_eq_dec (Z.abs m) (2 ^ 'p) H); clear H.
+  (* Case |m| < 2^p. *)
+  apply small_integers_are_representable.
+  (* Case |m| == 2^p splits further into cases m positive and m negative. *)
+  apply Z.abs_case; [ solve_proper | | ];
+  (* Subcase m = 2 ^ 'p. *)
+  intro H; [ | replace m with (- - m)%Z by ring; rewrite inject_Z_opp];
+    rewrite H; [ | apply neg_representable_is_representable ];
+      rewrite <- twopowerQ_twopower_pos;
+      apply powers_of_two_are_representable.
+Qed.
+
+(* For proving that something is representable, it's helpful to have a slightly
+   weaker bound than used in the definition. *)
+
+Lemma representable_le_bound (p : positive) (m e : Z) :
+  (Zabs m <= 2 ^ 'p)%Z ->
+  representable_in_precision p (inject_Z m * twopowerQ e).
+Proof.
+  intro H;
+  setoid_replace (inject_Z m * twopowerQ e) with (twopowerQ e * inject_Z m) by ring;
+  apply scaled_representable_is_representable;
+  now apply small_integers_are_representable_le.
 Qed.
 
 
@@ -205,19 +300,12 @@ Proof.
   now unfold Qabs.
 Qed.
 
-Lemma Qabs_twopower (x : Z) : Qabs (proj1_sig (twopower x)) == proj1_sig (twopower x).
+Lemma Qabs_twopower (x : Z) : Qabs (twopowerQ x) == twopowerQ x.
 Proof.
-  apply Qabs_pos.
-  destruct (twopower x). simpl. auto with qarith.
+  apply Qabs_pos, Qlt_le_weak, twopowerQ_positive.
 Qed.
 
 (* for any integers x and y and rational number q, 2^x <= q * 2^y   ->  2^(x - y) <= q *)
-
-Lemma twopowerQ_mul (x y : Z) :
-  twopowerQ x * twopowerQ y == twopowerQ (x + y).
-Proof.
-  unfold twopowerQ; simpl; now rewrite Qpower.Qpower_plus.
-Qed.
 
 Lemma twopower_lr (x y : Z) (q : Q) :
   twopowerQ x <= q * twopowerQ y  ->  twopowerQ (x - y) <= q.
@@ -1208,3 +1296,87 @@ End SeparationTheorems.
 
 Check first_separation_theorem.
 Check second_separation_theorem.
+
+Section RoundingForNonzero.
+
+(* The precision that we're going to round to, and the value that we're rounding. *)
+
+Variable p : positive.
+Variable x : Q.
+Hypothesis x_nonzero : ~ 0 == x.
+
+Let shift := (binadeQ _ x_nonzero - 'p + 1)%Z.
+Let scale := twopowerQ shift.
+
+Definition _round_toward_negative_for_nonzero := floorQ (x / scale) * scale.
+
+Lemma _rounded_representable :
+  representable_in_precision p _round_toward_negative_for_nonzero.
+Proof.
+  unfold _round_toward_negative_for_nonzero.
+  exists (floor (x / scale)), shift.
+  split.
+  unfold floorQ.
+  replace (twopowerQ shift) with scale.
+  easy.
+  easy.
+
+
+  
+
+
+End RoundingForNonzero.
+
+Check _round_toward_negative_for_nonzero.
+
+Definition round_toward_negative : (binary_float p).
+  (* Define differently depending on whether 0 == x or not. *)
+  case (Qeq_dec 0 x); intro H.
+  (* Case 0 == x. *)
+  refine (exist _ 0 _); exists 0%Z, 0%Z; intuition.
+  (* Case 0 != x. *)
+  refine (exist _ (_round_toward_negative_for_nonzero H) _).
+  
+
+
+
+
+Check Qeq_dec 0.
+
+
+Definition construct_float (p : positive) (m e : Z)
+  (m_bounded : (Zabs m < 2 ^ 'p)%Z) : binary_float p.
+  refine (exist _ ((inject_Z m) * proj1_sig (twopower e)) _).
+  exists m, e. intuition.
+Qed.
+
+
+Definition zero_float (p : positive) : binary_float p.
+  refine (exist _ 0 _); exists (0%Z), (0%Z); intuition.
+Defined.
+
+
+(* Definition of round down: for nonzero x, we want
+
+     round_down x = (floor (x / 2^p) * 2^p),
+
+   where p = binade x - r + 1.
+
+   Why?  1 <= x / 2^binade x < 2, so
+         2^(r-1) <= x / 2^p < 2^r.
+*)
+
+
+Definition round_down r (x : Q) : binary_float r.
+  case (Qeq_dec 0 x); intro.
+  (* Case 0 == x: return 0. *)
+  exact (zero_float r).
+  (* Case 0 != x: ... *)
+  Check let exp := binadeQ x n in floorQ (x / twopowerQ exp) * twopowerQ exp.
+  pose (exp := binadeQ x n).
+  refine (
+    construct_float r (floor (x / twopowerQ exp)) exp _).
+
+
+  Check binadeQ.
+  Check (binadeQ x n).
