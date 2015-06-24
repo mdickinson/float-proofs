@@ -317,6 +317,32 @@ Proof.
   now apply floor_ceiling_gap.
 Qed.
 
+(* Results about floor, ceiling and absolute value. *)
+
+Lemma abs_floor_le (x : Q) (m : Z) :
+  Qabs x <= inject_Z m  ->  (Z.abs (floor x) <= m)%Z.
+Proof.
+  intro abs_x_le_m; apply Z.abs_case; [
+    solve_proper |
+    (* Proving floor x <= m. *)
+    rewrite Zle_Qle; apply Qle_trans with (y := x); [
+      apply floor_spec, Zle_refl |
+      now apply Qabs_Qle_condition ]
+    |
+    (* Proving - floor x <= m. *)
+    rewrite neg_floor_is_ceiling_neg; apply ceiling_spec, Qabs_Qle_condition;
+    now rewrite Qabs_opp
+  ].
+Qed.
+
+Lemma abs_ceiling_le (x : Q) (m : Z) :
+  Qabs x <= inject_Z m  ->  (Z.abs (ceiling x) <= m)%Z.
+Proof.
+  setoid_replace x with (- - x) by ring;
+  rewrite Qabs_opp; rewrite <- neg_floor_is_ceiling_neg;
+  rewrite Z.abs_opp; apply abs_floor_le.
+Qed.
+
 (* Define the round function, which rounds to the nearest integer,
    rounding halfway cases to the nearest even integer. *)
 
