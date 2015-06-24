@@ -1,4 +1,4 @@
-MODULES := floor_and_ceiling qpos twopower binary_float
+MODULES := floor_and_ceiling qpos twopower
 VS := $(MODULES:%=%.v)
 
 .PHONY: coq clean
