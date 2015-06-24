@@ -1308,11 +1308,56 @@ Hypothesis x_nonzero : ~ 0 == x.
 Let shift := (binadeQ _ x_nonzero - 'p + 1)%Z.
 Let scale := twopowerQ shift.
 
+Lemma scaled_x_bounded : Qabs (x / scale) <= twopowerQ ('p).
+Proof.
+  rewrite Qabs_div.
+  setoid_replace (Qabs scale) with scale.
+  unfold scale.
+  apply Qle_shift_div_r.
+  apply twopowerQ_positive.
+  rewrite twopowerQ_mul.
+  apply Qlt_le_weak.
+  apply (twopowerQ_binadeQ_lt ('p + shift) x x_nonzero).
+  subst shift. omega.
+  apply Qabs_pos.
+  apply Qlt_le_weak.
+  apply twopowerQ_positive.
+  apply Qlt_not_eq.
+  apply twopowerQ_positive.
+Qed.
+
+
 Definition _round_toward_negative_for_nonzero := floorQ (x / scale) * scale.
 
 Lemma _rounded_representable :
   representable_in_precision p _round_toward_negative_for_nonzero.
 Proof.
+  apply (representable_le_bound _ (floor (x / scale)) shift).
+
+
+
+  apply Z.abs_case; [ solve_proper | |].
+  
+  SearchAbout (inject_Z _ <= inject_Z _).
+  rewrite Zle_Qle.
+  apply Qle_trans with (y := x / scale).
+  apply floor_spec, Z.le_refl.
+  
+  
+
+  SearchAbout (floorQ _ <= _).
+
+  
+  (* Showing that floor(x / scale) <= 2^p. *)
+  Check Z.le_trans.
+  SearchAbout (inject_Z).
+  
+  
+
+  SearchAbout Z.abs.
+  SearchAbout (Z.abs (floor _))%Z.
+  
+
   unfold _round_toward_negative_for_nonzero.
   exists (floor (x / scale)), shift.
   split.
@@ -1320,6 +1365,7 @@ Proof.
   replace (twopowerQ shift) with scale.
   easy.
   easy.
+  
 
 
   
