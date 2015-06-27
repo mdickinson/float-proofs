@@ -11,7 +11,10 @@ Require Import ZArith.
 Require Import QArith.
 Require Import Qpower.
 Require Import QOrderedType.
+Require Import Qabs.
+
 Require Import qpos.
+Require Import floor_and_ceiling.
 
 (**
 
@@ -393,4 +396,49 @@ Theorem binade_div x y :
 Proof.
   remember (x / y) as z; setoid_replace x with (x / y * y) by (symmetry;
   apply QPos_div_mul); rewrite <- Heqz; pose proof (binade_mul z y); omega.
+Qed.
+
+(* Versions of twopower and binade for the rationals. *)
+
+Open Scope Q.
+
+Definition twopowerQ n := proj1_sig (twopower n).
+
+Lemma twopowerQ_positive n : 0 < twopowerQ n.
+Proof.
+  unfold twopowerQ; now destruct (twopower n).
+Qed.
+
+Lemma Qabs_twopower (x : Z) : Qabs (twopowerQ x) == twopowerQ x.
+Proof.
+  apply Qabs_pos, Qlt_le_weak, twopowerQ_positive.
+Qed.
+
+Lemma twopowerQ_monotonic_lt m n : (m < n)%Z -> twopowerQ m < twopowerQ n.
+Proof.
+  apply twopower_monotonic_lt.
+Qed.
+
+Lemma twopowerQ_injective_lt (p q : Z) :
+  twopowerQ p < twopowerQ q  ->  (p < q)%Z.
+Proof.
+  apply twopower_injective_lt.
+Qed.
+
+Lemma twopowerQ_injective_le (p q : Z) :
+  twopowerQ p <= twopowerQ q  ->  (p <= q)%Z.
+Proof.
+  apply twopower_injective_le.
+Qed.
+
+Lemma twopowerQ_mul m n : twopowerQ (m + n) == twopowerQ m * twopowerQ n.
+Proof.
+  apply twopower_mul.
+Qed.
+
+Lemma is_integer_twopowerQ (n : Z) :
+  (0 <= n)%Z -> is_integer (twopowerQ n).
+Proof.
+  unfold twopowerQ; intro; simpl;
+  rewrite <- Qpower.Zpower_Qpower; [ apply is_integer_inject_Z | easy ].
 Qed.
