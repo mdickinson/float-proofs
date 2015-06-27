@@ -274,6 +274,12 @@ Proof.
   intro; rewrite <- Zle_Qle; now apply floor_spec.
 Qed.
 
+Lemma integer_le_ceiling (x y : Q) :
+  is_integer x -> x <= y -> inject_Z (ceiling x) <= y.
+Proof.
+  intros; apply floor_spec; apply ceiling_spec; now apply integer_le_floor.
+Qed.
+
 Lemma ceiling_integer (q : Q) : is_integer q <-> inject_Z (ceiling q) == q.
 Proof.
   unfold is_integer; split; intro H;
