@@ -12,6 +12,40 @@ Open Scope Q.
 
 (* Some remedial lemmas. *)
 
+Lemma Qle_shift_mul_r a b c : 0 < b -> a / b <= c -> a <= c * b.
+Proof.
+  intros b_pos H.
+  apply Qmult_lt_0_le_reg_r with (z := / b).
+  now apply Qinv_lt_0_compat.
+  setoid_replace (c * b / b) with c by field.
+  apply H.
+  intro. symmetry in H0. revert H0.
+  now apply Qlt_not_eq.
+Qed.
+
+Lemma Qle_shift_mul_l a b c : 0 < b -> a <= c / b -> a * b <= c.
+Proof.
+  intros b_pos H.
+  apply Qmult_lt_0_le_reg_r with (z := /b).
+  now apply Qinv_lt_0_compat.
+  setoid_replace (a * b / b) with a by field.
+  apply H.
+  intro. symmetry in H0.  revert H0.
+  now apply Qlt_not_eq.
+Qed.
+
+
+Lemma Qlt_gt_cases (x y : Q) : ~(x == y) -> x < y \/ y < x.
+Proof.
+  case (Q_dec x y); intuition.
+Qed.
+
+Lemma Qpositive_nonzero x : 0 < x  ->  ~(0 == x).
+Proof.
+  intros H H0; now rewrite <- H0 in H.
+Qed.
+
+
 Lemma lt_sum_is_diff_lt (a b c : Q) : a < b + c  <->  a - c < b.
 Proof.
   split; intro.
@@ -120,12 +154,24 @@ Definition floorQ (q : Q) := inject_Z (floor q).
 
 Definition ceilingQ (q : Q) := inject_Z (ceiling q).
 
+Lemma neg_floorQ_is_ceilingQ_neg (q : Q) :
+  - floorQ q == ceilingQ (- q).
+Proof.
+  unfold floorQ, ceilingQ; rewrite <- inject_Z_opp;
+  now rewrite neg_floor_is_ceiling_neg.
+Qed.
+
 
 Definition twopowerQ (x : Z): Q := proj1_sig (twopower x).
 
 Lemma twopowerQ_positive (p : Z) : 0 < twopowerQ p.
 Proof.
   unfold twopowerQ; now destruct (twopower p).
+Qed.
+
+Lemma twopowerQ_nonzero (p : Z) : ~ 0 == twopowerQ p.
+Proof.
+  apply Qpositive_nonzero; apply twopowerQ_positive.
 Qed.
 
 Lemma twopowerQ_monotonic_le (p q : Z) :
@@ -149,12 +195,7 @@ Proof.
 Qed.
 
 
-Definition representable_in_precision (p : positive) (x : Q) :=
-  exists (m : Z) (e : Z),
-    (x == (inject_Z m) * proj1_sig (twopower e)) /\
-    (Zabs m < 2 ^ 'p)%Z.
-
-(* Relationship between 2^ and twopower. *)
+(* Relationship between 2^_ and twopower. *)
 
 Lemma twopowerQ_twopower_nonneg (m : Z) :
   (0 <= m)%Z  ->  twopowerQ m == inject_Z (2 ^ m).
@@ -164,25 +205,130 @@ Proof.
   now apply Qpower.Zpower_Qpower.
 Qed.
 
-
-Lemma small_integer_is_zero (x : Q) :
-  is_integer x -> Qabs x < 1 -> 0 == x.
+Lemma twopowerQ_twopower_pos (p : positive) :
+  twopowerQ ('p) == inject_Z (2 ^ 'p).
 Proof.
-  intro.
-  apply Qabs_case; intros.
-
-  setoid_replace x with (inject_Z (floor x)) by (symmetry; now apply floor_integer).
-  apply inject_Z_injective.
-  rewrite floor_spec_alt. auto.
-
-  setoid_replace x with (inject_Z (ceiling x)) by (symmetry; now apply ceiling_integer).
-  apply inject_Z_injective.
-  rewrite ceiling_spec_alt.
-  setoid_replace (inject_Z 0 - 1) with (- (1)) by ring.
-  assert (-(1) < x) by (now apply Qneg_le).
-  auto.
+  now apply twopowerQ_twopower_nonneg.
 Qed.
 
+Lemma twopowerQ_mul (x y : Z) :
+  twopowerQ x * twopowerQ y == twopowerQ (x + y).
+Proof.
+  unfold twopowerQ; simpl; now rewrite Qpower.Qpower_plus.
+Qed.
+
+Lemma twopowerQ_div (x y : Z) :
+  twopowerQ x / twopowerQ y == twopowerQ (x - y).
+Proof.
+  unfold twopowerQ; simpl.
+  rewrite Qdiv_mul.
+  rewrite twopowerQ_mul.
+  replace (x - y + y)%Z with x by ring.
+  easy.
+  apply twopowerQ_nonzero.
+Qed.
+
+Lemma twopowerQ_inv (x : Z) :
+  / twopowerQ x == twopowerQ (-x).
+Proof.
+  setoid_replace (/ twopowerQ x) with (1 / twopowerQ x) by field.
+  setoid_replace 1 with (twopowerQ 0) by now compute.
+  replace (-x)%Z with (0 - x)%Z by ring.
+  apply twopowerQ_div.
+  apply Qnot_eq_sym, Qlt_not_eq, two_to_the_power_n_is_positive.
+Qed.
+
+Definition representable_in_precision (p : positive) (x : Q) :=
+  exists (m : Z) (e : Z),
+    (x == inject_Z m * twopowerQ e) /\
+    (Zabs m < 2 ^ 'p)%Z.
+
+Add Morphism representable_in_precision : representable_in_precision_morphism.
+Proof.
+  intros p x y x_eq_y; split; unfold representable_in_precision; intro H;
+    destruct H as [m H]; destruct H as [e H]; exists m, e;
+      [rewrite <- x_eq_y | rewrite x_eq_y ]; easy.
+Qed.
+
+(* We establish some basic properties. *)
+
+Lemma zero_is_representable (p : positive) :
+  representable_in_precision p 0.
+Proof.
+  exists 0%Z, 0%Z; split; [ now compute | now apply Z.pow_pos_nonneg ].
+Qed.
+
+Lemma one_is_representable (p : positive) :
+  representable_in_precision p 1.
+Proof.
+  exists 1%Z, 0%Z; split; [now compute |
+  replace (Z.abs 1) with (2 ^ 0)%Z by easy;
+  now apply Zpow_facts.Zpower_lt_monotone ].
+Qed.
+
+Lemma neg_representable_is_representable (p : positive) (x : Q) :
+  representable_in_precision p x -> representable_in_precision p (-x).
+Proof.
+  intro H; destruct H as [m H]; destruct H as [e H];
+  destruct H as [Hx Hm]; exists (-m)%Z, e;
+  split; [ rewrite Hx, inject_Z_opp; ring | now rewrite Z.abs_opp ].
+Qed.
+
+Lemma small_integers_are_representable (p : positive) (m : Z) :
+  (Zabs m < 2 ^ 'p)%Z -> representable_in_precision p (inject_Z m).
+Proof.
+  exists m, 0%Z; split;
+  [ setoid_replace (twopowerQ 0) with 1 by easy; ring | easy].
+Qed.
+
+Lemma scaled_representable_is_representable (p : positive) (e : Z) (x : Q) :
+  representable_in_precision p x ->
+    representable_in_precision p (twopowerQ e * x).
+Proof.
+  intro H; destruct H as [m H]; destruct H as [e0 H]; destruct H as [Hx Hm];
+  exists m, (e + e0)%Z; split; [ setoid_rewrite <- twopowerQ_mul; rewrite Hx;
+                                 ring
+                               | easy].
+Qed.
+
+Lemma powers_of_two_are_representable (p : positive) (e : Z) :
+  representable_in_precision p (twopowerQ e).
+Proof.
+  setoid_replace (twopowerQ e) with (twopowerQ e * 1) by ring;
+  apply scaled_representable_is_representable, one_is_representable.
+Qed.
+
+Lemma small_integers_are_representable_le (p : positive) (m : Z) :
+  (Zabs m <= 2 ^ 'p)%Z -> representable_in_precision p (inject_Z m).
+Proof.
+  (* Split into cases |m| < 2^p and |m| = 2^p. *)
+  intro H; case (Z_le_lt_eq_dec (Z.abs m) (2 ^ 'p) H); clear H.
+  (* Case |m| < 2^p. *)
+  apply small_integers_are_representable.
+  (* Case |m| == 2^p splits further into cases m positive and m negative. *)
+  apply Z.abs_case; [ solve_proper | | ];
+  (* Subcase m = 2 ^ 'p. *)
+  intro H; [ | replace m with (- - m)%Z by ring; rewrite inject_Z_opp];
+    rewrite H; [ | apply neg_representable_is_representable ];
+      rewrite <- twopowerQ_twopower_pos;
+      apply powers_of_two_are_representable.
+Qed.
+
+(* For proving that something is representable, it's helpful to have a slightly
+   weaker bound than used in the definition. *)
+
+Lemma representable_le_bound (p : positive) (m e : Z) :
+  (Zabs m <= 2 ^ 'p)%Z ->
+  representable_in_precision p (inject_Z m * twopowerQ e).
+Proof.
+  intro H;
+  setoid_replace (inject_Z m * twopowerQ e) with
+  (twopowerQ e * inject_Z m) by ring;
+  apply scaled_representable_is_representable;
+  now apply small_integers_are_representable_le.
+Qed.
+
+(* Large representable numbers are integral. *)
 
 Lemma is_integer_twopower (x : Z) :
   (0 <= x)%Z -> is_integer (proj1_sig (twopower x)).
@@ -191,6 +337,62 @@ Proof.
   rewrite <- Qpower.Zpower_Qpower.
   apply is_integer_inject_Z. easy.
 Qed.
+
+Lemma large_representable_is_integral (p : positive) (x : Q) :
+  representable_in_precision p x ->
+  twopowerQ ('p - 1) <= Qabs x -> is_integer x.
+Proof.
+  unfold representable_in_precision.
+  intro x_representable.
+  destruct x_representable as [m H].
+  destruct H as [e H].
+  destruct H as [H0 H1].
+  rewrite H0.
+  intro x_large.
+  apply is_integer_mul.
+  apply is_integer_inject_Z.
+  apply is_integer_twopower.
+
+  (* Goal now is 0 <= e. *)
+  assert ('p - 1 < 'p + e)%Z.
+  apply twopowerQ_injective_lt.
+  apply Qle_lt_trans with (y := Qabs (inject_Z m * twopowerQ e)).
+  assumption.
+  rewrite <- twopowerQ_mul.
+  rewrite Qabs_Qmult.
+  setoid_replace (Qabs (twopowerQ e)) with (twopowerQ e).
+  apply Qmult_lt_r.
+  apply twopowerQ_positive.
+  rewrite twopowerQ_twopower_pos.
+  setoid_rewrite <- Zabs_Qabs.
+  replace (Z.abs m # 1) with (inject_Z (Z.abs m)) by easy.
+  now rewrite <- Zlt_Qlt.
+  apply Qabs_pos.
+  apply Qlt_le_weak.
+  apply twopowerQ_positive.
+  omega.
+Qed.
+
+Lemma small_integer_is_zero (x : Q) :
+  is_integer x -> Qabs x < 1 -> 0 == x.
+Proof.
+  intro.
+  apply Qabs_case; intros.
+
+  setoid_replace x with (inject_Z (floor x)) by
+      (symmetry; now apply floor_integer).
+  apply inject_Z_injective.
+  rewrite floor_spec_alt. auto.
+
+  setoid_replace x with (
+    inject_Z (ceiling x)) by (symmetry; now apply ceiling_integer).
+  apply inject_Z_injective.
+  rewrite ceiling_spec_alt.
+  setoid_replace (inject_Z 0 - 1) with (- (1)) by ring.
+  assert (-(1) < x) by (now apply Qneg_le).
+  auto.
+Qed.
+
 
 (* Now we can define the subsets of binary floats of various precisions. *)
 Definition binary_float (p : positive) :=
@@ -205,19 +407,13 @@ Proof.
   now unfold Qabs.
 Qed.
 
-Lemma Qabs_twopower (x : Z) : Qabs (proj1_sig (twopower x)) == proj1_sig (twopower x).
+Lemma Qabs_twopower (x : Z) : Qabs (twopowerQ x) == twopowerQ x.
 Proof.
-  apply Qabs_pos.
-  destruct (twopower x). simpl. auto with qarith.
+  apply Qabs_pos, Qlt_le_weak, twopowerQ_positive.
 Qed.
 
-(* for any integers x and y and rational number q, 2^x <= q * 2^y   ->  2^(x - y) <= q *)
-
-Lemma twopowerQ_mul (x y : Z) :
-  twopowerQ x * twopowerQ y == twopowerQ (x + y).
-Proof.
-  unfold twopowerQ; simpl; now rewrite Qpower.Qpower_plus.
-Qed.
+(* for any integers x and y and rational number q, 2^x <= q * 2^y -> 2^(x - y)
+   <= q *)
 
 Lemma twopower_lr (x y : Z) (q : Q) :
   twopowerQ x <= q * twopowerQ y  ->  twopowerQ (x - y) <= q.
@@ -386,9 +582,11 @@ Lemma small_multiple_is_zero (m a : Q) :
 Proof.
   unfold is_multiple_of.
   intros a_multiple a_bounded.
-  assert (0 < m) as m_positive by (apply Qle_lt_trans with (y := Qabs a); [apply Qabs_nonneg | easy]).
+  assert (0 < m) as m_positive by
+        (apply Qle_lt_trans with (y := Qabs a); [apply Qabs_nonneg | easy]).
 
-  assert (Qabs m == m) as m_positive2 by (apply Qabs_pos; now apply Qlt_le_weak).
+  assert (Qabs m == m) as m_positive2 by
+        (apply Qabs_pos; now apply Qlt_le_weak).
 
   assert (~ m == 0) as m_nonzero.
   intro. rewrite H in m_positive.
@@ -548,7 +746,8 @@ Proof.
 
   assert (binadeQ (inject_Z m) m_nonzero < 'p)%Z.
   unfold binadeQ.
-  set (mpos := exist _ (Qabs (inject_Z m)) (abs_nonzero (inject_Z m) m_nonzero)).
+  set (mpos := exist _ (Qabs (inject_Z m))
+                     (abs_nonzero (inject_Z m) m_nonzero)).
   apply twopower_binade_lt.
 
   assert (Qabs (inject_Z m) < twopowerQ ('p)).
@@ -569,7 +768,8 @@ Proof.
 
   rewrite <- Qmult_assoc.
   rewrite twopowerQ_mul.
-  replace ('p - 1 - binadeQ (inject_Z m) m_nonzero + (binadeQ (inject_Z m) m_nonzero + e - 'p + 1))%Z with e by ring.
+  replace ('p - 1 - binadeQ (inject_Z m) m_nonzero +
+           (binadeQ (inject_Z m) m_nonzero + e - 'p + 1))%Z with e by ring.
   reflexivity.
 Qed.
 
@@ -598,13 +798,10 @@ Proof.
   destruct r.
   destruct H.
   destruct H.
-  (* Main aim now is to prove that x1 is nonnegative, so that (inject 2)^x1 is integral. *)
-  intro.
-  rewrite H in H1.
-  rewrite H.
-  apply is_integer_mul.
-  apply is_integer_inject_Z.
-  apply is_integer_twopower.
+  (* Main aim now is to prove that x1 is nonnegative, so that (inject 2)^x1 is
+  integral. *)
+  intro.  rewrite H in H1.  rewrite H.  apply is_integer_mul.
+  apply is_integer_inject_Z.  apply is_integer_twopower.
   (* Now all we have to do is show that 0 <= x1. *)
   (* We're given that 2^(p-1) <= abs (x0 * 2^x1),
      and that x0 < 2^p, hence that
@@ -653,11 +850,12 @@ Qed.
 
 Lemma rhs_negative_le (x y : Q) : x <= -y -> y <= -x.
 Proof.
-  intro.
-  setoid_replace y with (- - y).
-  now rewrite <- Qopp_le_mono.
-  symmetry. auto with qarith.
-  apply Qopp_opp.
+  intro; setoid_replace y with (- - y) by ring; now rewrite <- Qopp_le_mono.
+Qed.
+
+Lemma lhs_negative_le (x y : Q) : -x <= y -> -y <= x.
+Proof.
+  intro; setoid_replace x with (- - x) by ring; now rewrite <- Qopp_le_mono.
 Qed.
 
 
@@ -755,7 +953,8 @@ Proof.
   now apply floor_spec_alt.
   apply z_bounds.
 
-  setoid_replace (-(x_over_y - proj1_sig z)) with (proj1_sig z - x_over_y) by ring.
+  setoid_replace (-(x_over_y - proj1_sig z)) with
+  (proj1_sig z - x_over_y) by ring.
   apply lt_sum_is_diff_lt.
   apply Qle_lt_trans with (y := inject_Z (ceiling x_over_y)).
   apply z_bounds.
@@ -799,8 +998,8 @@ Hypothesis p_small : ('p < 'q + 'r)%Z.
 Hypothesis x_over_y_large :
   twopowerQ ('q + 'r - 1) <= Qabs x_over_y.
 
-(* Now we've got everything in place to start proving that under the hypotheses above,
-   x / y is an integer. *)
+(* Now we've got everything in place to start proving that under the hypotheses
+   above, x / y is an integer. *)
 
 (* First we show that z is integral. *)
 
@@ -1206,5 +1405,235 @@ End SecondSeparationTheorem.
 
 End SeparationTheorems.
 
-Check first_separation_theorem.
-Check second_separation_theorem.
+Section RoundingForNonzero.
+
+(* The precision that we're going to round to, and the value that we're
+rounding. *)
+
+Variable p : positive.
+Variable x : Q.
+Hypothesis x_nonzero : ~ 0 == x.
+
+Let shift := (binadeQ _ x_nonzero - 'p + 1)%Z.
+Let scale := twopowerQ shift.
+
+Lemma scaled_x_bounded : Qabs (x / scale) <= twopowerQ ('p).
+Proof.
+  rewrite Qabs_div.
+  setoid_replace (Qabs scale) with scale.
+  unfold scale.
+  apply Qle_shift_div_r.
+  apply twopowerQ_positive.
+  rewrite twopowerQ_mul.
+  apply Qlt_le_weak.
+  apply (twopowerQ_binadeQ_lt ('p + shift) x x_nonzero).
+  subst shift. omega.
+  apply Qabs_pos.
+  apply Qlt_le_weak.
+  apply twopowerQ_positive.
+  apply Qlt_not_eq.
+  apply twopowerQ_positive.
+Qed.
+
+
+Definition _round_toward_negative_for_nonzero := floorQ (x / scale) * scale.
+
+
+Lemma _rounded_representable :
+  representable_in_precision p _round_toward_negative_for_nonzero.
+Proof.
+  apply (representable_le_bound _ (floor (x / scale)) shift).
+  apply abs_floor_le.
+  rewrite <- twopowerQ_twopower_pos.
+  apply scaled_x_bounded.
+Qed.
+
+
+End RoundingForNonzero.
+
+Notation "[ e ]" := (exist _ e _).
+
+Definition round_toward_negative (p : positive) (x : Q) : (binary_float p).
+Proof.
+  refine (
+      if Qeq_dec 0 x then [ 0 ] else
+        [ _round_toward_negative_for_nonzero _ x _ ]
+  ).
+  apply zero_is_representable.
+  apply _rounded_representable.
+  Grab Existential Variables.
+  easy.
+Defined.
+
+(* To be confident that round_toward_negative is doing the right
+   thing, we need a theorem that characterises it completely. *)
+
+Set Implicit Arguments.
+
+Definition float_le p (x y : binary_float p) : Prop :=
+  proj1_sig x <= proj1_sig y.
+
+Delimit Scope float_scope with float.
+
+Infix "<=" := float_le : float_scope.
+
+
+Lemma round_toward_negative_small (p : positive) (x : Q) :
+  proj1_sig (round_toward_negative p x) <= x.
+Proof.
+  unfold round_toward_negative.
+  case (Qeq_dec 0 x).
+  (* Case x == 0 *)
+  intro H; rewrite <- H; now compute.
+  (* Case 0 != x. *)
+  unfold _round_toward_negative_for_nonzero; simpl.
+  intro H.
+  apply Qle_shift_mul_l.
+  apply twopowerQ_positive.
+  apply floor_spec.
+  apply Z.le_refl.
+Qed.
+
+
+Theorem round_toward_negative_spec (p : positive) (x : Q)
+        (f : binary_float p) :
+  proj1_sig f <= x  <->  (f <= round_toward_negative p x)%float.
+Proof.
+  split.
+  (* This is the harder direction; the other is already taken care of
+     by round_toward_negative_small. *)
+  unfold round_toward_negative, float_le.
+  (* Divide into cases x zero versus x nonzero. *)
+  case (Qeq_dec 0 x).
+  (* Case x == 0. *)
+  unfold float_le; intro H; now rewrite <- H.
+  (* Case x != 0. *)
+  (* Now divide further into cases x positive and x negative. *)
+
+  (* Case x positive. *)
+  unfold _round_toward_negative_for_nonzero; intro H;
+  case (Qlt_gt_cases _ _ H).
+  intros x_pos.
+  case (Qlt_le_dec (proj1_sig f) (twopowerQ (binadeQ x H))); intro.
+  (* Case where f < twopower e. *)
+  intro.
+  simpl.
+  apply Qle_trans with (y := twopowerQ (binadeQ x H)).
+  now apply Qlt_le_weak.
+  apply Qle_shift_mul_r.
+  apply twopowerQ_positive.
+  rewrite twopowerQ_div.
+  apply integer_le_floor.
+  replace (binadeQ x H - (binadeQ x H - 'p + 1))%Z with ('p - 1)%Z by ring.
+  apply is_integer_twopower.
+  assert (0 < 'p)%Z by easy; omega.
+  apply (Qle_shift_div_l _ _ _ (twopowerQ_positive _)).
+  rewrite twopowerQ_mul.
+  match goal with | [ |- twopowerQ ?v <= x] =>
+                    replace v with (binadeQ x H) by ring
+
+  end.
+  assert (Qabs x == x).
+  apply Qabs_pos.
+  now apply Qlt_le_weak.
+  rewrite <- H1 at 2.
+  rewrite twopowerQ_binadeQ_le.
+  instantiate (1:=H).
+  apply Z.le_refl.
+  (* Case where 2^e <= f <= x. *)
+  intro.
+  apply Qle_shift_mul_r.
+  apply twopowerQ_positive.
+  apply integer_le_floor.
+  destruct f.
+  simpl.
+  simpl in H0.
+  (* now we're showing that x0 / ... is an integer, given that it's large
+     and representable. *)
+  apply large_representable_is_integral with (p := p).
+  unfold Qdiv; rewrite twopowerQ_inv.
+  rewrite Qmult_comm.
+  now apply scaled_representable_is_representable.
+
+  rewrite Qabs_div.
+  rewrite Qabs_twopower.
+  apply Qle_shift_div_l.
+  apply twopowerQ_positive.
+  rewrite twopowerQ_mul.
+  replace ('p - 1 + (binadeQ x H - 'p + 1))%Z with (binadeQ x H)%Z by ring.
+  simpl in q.
+  apply Qle_trans with (y := x0).
+  easy.
+  apply Qle_Qabs.
+
+  apply Qlt_not_eq.
+  apply twopowerQ_positive.
+
+  apply Qmult_le_compat_r.
+  easy.
+  rewrite twopowerQ_inv.
+  (* Now showing that 0 <= twopowerQ ...*)
+  apply Qlt_le_weak.
+  apply twopowerQ_positive.
+
+  (* Now we have to do the same again, this time for negative x. *)
+  (* This time we shouldn't need to split into cases: we
+     can show that f, scaled by the appropriate power of 2,
+     is always an integer. *)
+  intros.
+  apply Qle_shift_mul_r.
+  apply twopowerQ_positive.
+  (* Now it's enough to show that f / 2^(e - p + 1) is an integer. *)
+  apply integer_le_floor.
+  apply (large_representable_is_integral p).
+  unfold Qdiv; rewrite twopowerQ_inv.
+  rewrite Qmult_comm.
+  apply scaled_representable_is_representable.
+  destruct f.
+  easy.
+
+  rewrite Qabs_div.
+  apply Qle_shift_div_l.
+  apply abs_nonzero.
+  apply Qlt_not_eq.
+  apply twopowerQ_positive.
+  rewrite Qabs_twopower.
+  rewrite twopowerQ_mul.
+  setoid_replace ('p - 1 + (binadeQ x H - 'p + 1))%Z
+  with (binadeQ x H)%Z by ring.
+  apply Qle_trans with (y := Qabs x).
+  apply (twopowerQ_binadeQ_le _ _ H).
+  auto with zarith.
+
+  rewrite Qabs_neg.
+  rewrite Qabs_neg.
+  now rewrite <- Qopp_le_mono.
+  apply Qle_trans with (y := x).
+  easy.
+  apply Qlt_le_weak.
+  easy.
+  apply Qlt_le_weak.
+  easy.
+  apply Qlt_not_eq.
+  apply twopowerQ_positive.
+  apply Qmult_le_compat_r.
+  easy.
+  apply Qlt_le_weak.
+  apply Qinv_lt_0_compat.
+  apply twopowerQ_positive.
+
+  intro.
+  apply Qle_trans with (y := proj1_sig (round_toward_negative p x)).
+  apply H.
+  apply round_toward_negative_small.
+Qed.
+
+(* Check some values. *)
+Eval compute in (proj1_sig (round_toward_negative 5 (1 # 3))).
+Eval compute in (proj1_sig (round_toward_negative 5 0)).
+Eval compute in (proj1_sig
+     (round_toward_negative 53 (314159265358979323 # 100000000000000000))).
+Eval compute in (proj1_sig
+     (round_toward_negative 53 (-314159265358979323 # 100000000000000000))).
+Eval compute in (proj1_sig (round_toward_negative 53 (1 # 1000))).
+Eval compute in (proj1_sig (round_toward_negative 53 (-1 # 1000))).
