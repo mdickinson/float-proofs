@@ -28,7 +28,7 @@ see if we can make use of the existing positive and N types.
 
 *)
 
-Open Scope N.
+Local Open Scope N.
 
 Definition N_to_pos (n : N) := Z.to_pos (Z.of_N n).
 
@@ -47,7 +47,7 @@ Proof.
   apply N.pow_nonzero; now compute.
 Qed.
 
-Open Scope Q.
+Local Open Scope Q.
 
 Lemma nonzero_and_nonneg_implies_positive: forall q : Q,
    ~ q == 0  ->  q >= 0  ->  q > 0.
@@ -112,7 +112,7 @@ Proof.
   auto.
 Qed.
 
-Open Scope QPos.
+Local Open Scope QPos.
 
 Definition twopower (n : Z) : QPos.
   refine (exist _ (inject_Z 2 ^ n)%Q _).
@@ -400,7 +400,7 @@ Qed.
 
 (* Versions of twopower and binade for the rationals. *)
 
-Open Scope Q.
+Local Open Scope Q.
 
 Definition twopowerQ n := proj1_sig (twopower n).
 
