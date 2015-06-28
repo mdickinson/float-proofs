@@ -117,3 +117,15 @@ Qed.
 (* Definition of binary_float p as a subset of Q. *)
 
 Definition binary_float (p : positive) := { x : Q | representable p x}.
+
+(* The zero float. *)
+
+Definition zero_float p : binary_float p :=
+  exist _ _ (zero_is_representable p).
+
+(* Construction of a float from a (suitably bounded) significand and
+   an exponent. *)
+
+Definition float_from_significand_and_exponent p m e
+  (m_bounded : Qabs (inject_Z m) <= twopowerQ ('p)) : binary_float p :=
+  exist _ _ (representable_le_bound p m e m_bounded).
