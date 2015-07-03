@@ -60,6 +60,14 @@ Proof.
   rewrite H1; rewrite twopowerQ_mul; ring.
 Qed.
 
+Lemma scaled_representable_is_representable_div p e x :
+  representable p x -> representable p (x / twopowerQ e).
+Proof.
+  unfold Qdiv; rewrite <- twopowerQ_inv;
+  apply scaled_representable_is_representable.
+Qed.
+
+
 Lemma small_integers_are_representable p m :
   Qabs (inject_Z m) < twopowerQ ('p) -> representable p (inject_Z m).
 Proof.
@@ -129,3 +137,45 @@ Definition zero_float p : binary_float p :=
 Definition float_from_significand_and_exponent p m e
   (m_bounded : Qabs (inject_Z m) <= twopowerQ ('p)) : binary_float p :=
   exist _ _ (representable_le_bound p m e m_bounded).
+
+(* Some basic notation in the domain of floats. *)
+
+Delimit Scope float_scope with float.
+
+Set Implicit Arguments.
+
+Definition float_le p (x y : binary_float p) : Prop :=
+  proj1_sig x <= proj1_sig y.
+
+Definition float_eq p (x y : binary_float p) : Prop :=
+  proj1_sig x == proj1_sig y.
+
+
+Infix "<=" := float_le : float_scope.
+Infix "==" := float_eq : float_scope.
+Notation "0" := (zero_float _) : float_scope.
+
+Open Scope float.
+
+Lemma float_eq_reflexivity p (x : binary_float p) : x == x.
+Proof.
+  now unfold float_eq.
+Qed.
+
+Lemma float_eq_symmetry p (x y : binary_float p) : x == y -> y == x.
+Proof.
+  now unfold float_eq.
+Qed.
+
+Lemma float_eq_transitivity p (x y z : binary_float p) :
+  x == y -> y == z -> x == z.
+Proof.
+  apply Qeq_trans.
+Qed.
+
+
+Add Parametric Relation (p : positive) : (binary_float p) (@float_eq p)
+    reflexivity proved by (@float_eq_reflexivity p)
+    symmetry proved by (@float_eq_symmetry p)
+    transitivity proved by (@float_eq_transitivity p)
+      as EqualFloat.

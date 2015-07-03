@@ -15,6 +15,7 @@ Require Import Qabs.
 
 Require Import qpos.
 Require Import floor_and_ceiling.
+Require Import remedial.
 
 (**
 
@@ -137,6 +138,11 @@ Lemma twopower_div : forall p q : Z, twopower (p - q) == (twopower p) / (twopowe
 Proof.
   intros p q; remember (p - q)%Z as r; replace p with (r + q)%Z by (rewrite Heqr; ring).
   apply QPos_div_mul_r; symmetry; apply twopower_mul.
+Qed.
+
+Lemma twopower_inv p : twopower (-p) == / twopower p.
+Proof.
+  change (-p)%Z with (0 - p)%Z; rewrite twopower_div; apply QPos.mul_1_l.
 Qed.
 
 Lemma twopower_zero : twopower 0 == 1.
@@ -409,6 +415,11 @@ Proof.
   unfold twopowerQ; now destruct (twopower n).
 Qed.
 
+Lemma twopowerQ_nonzero n : ~(twopowerQ n == 0).
+Proof.
+  apply Qnot_eq_sym, Qlt_not_eq, twopowerQ_positive.
+Qed.
+
 Lemma Qabs_twopower (x : Z) : Qabs (twopowerQ x) == twopowerQ x.
 Proof.
   apply Qabs_pos, Qlt_le_weak, twopowerQ_positive.
@@ -436,9 +447,45 @@ Proof.
   apply twopower_mul.
 Qed.
 
+Lemma twopowerQ_inv m : twopowerQ (- m) == / twopowerQ m.
+Proof.
+  apply twopower_inv.
+Qed.
+
+Lemma twopowerQ_div m n : twopowerQ (m - n) == twopowerQ m / twopowerQ n.
+Proof.
+  apply twopower_div.
+Qed.
+
+
 Lemma is_integer_twopowerQ (n : Z) :
   (0 <= n)%Z -> is_integer (twopowerQ n).
 Proof.
   unfold twopowerQ; intro; simpl;
   rewrite <- Qpower.Zpower_Qpower; [ apply is_integer_inject_Z | easy ].
+Qed.
+
+(* We define binadeQ for all nonzero numbers. *)
+
+Definition binadeQ x (x_nonzero : ~(x == 0)) : Z :=
+  binade (exist _ (Qabs x) (abs_nonzero x x_nonzero)).
+
+(* Relationships between twopower and binade. *)
+
+Lemma twopowerQ_binadeQ_lt n q (q_nonzero : ~(q == 0)) :
+  Qabs q < twopowerQ n  <->  (binadeQ q q_nonzero < n)%Z.
+Proof.
+  unfold twopowerQ, binadeQ; now rewrite <- twopower_binade_lt.
+Qed.
+
+Lemma twopowerQ_binadeQ_le n q (q_nonzero : ~(q == 0)) :
+  twopowerQ n <= Qabs q  <->  (n <= binadeQ q q_nonzero)%Z.
+Proof.
+  unfold twopowerQ, binadeQ; now rewrite <- twopower_binade_le.
+Qed.
+
+Lemma binadeQ_monotonic x (x_nonzero : ~(x == 0)) y (y_nonzero : ~(y == 0)) :
+  Qabs x <= Qabs y  ->  (binadeQ x x_nonzero <= binadeQ y y_nonzero)%Z.
+Proof.
+  intro; unfold binadeQ; now apply binade_monotonic.
 Qed.
