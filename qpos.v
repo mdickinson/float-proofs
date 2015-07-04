@@ -203,7 +203,7 @@ Infix "<" := QPos.lt : QPos_scope.
 Infix "<=" := QPos.le : QPos_scope.
 Notation "p > q" := (q < p) (only parsing) : QPos_scope.
 Notation "p >= q" := (q <= p) (only parsing) : QPos_scope.
-Notation "p != q" := (~p==q) (at level 70, no associativity) : QPos_scope.
+Notation "p <> q" := (~p==q) (at level 70, no associativity) : QPos_scope.
 
 Infix "?=" := QPos.compare (at level 70, no associativity) : QPos_scope.
 Infix "=?" := QPos.eqb (at level 70, no associativity) : QPos_scope.

@@ -239,6 +239,14 @@ Proof.
   now exists (round_toward_negative p x).
 Qed.
 
+(* Variant of the specification. *)
+
+Lemma round_toward_negative_spec_lt p x (f : binary_float p) :
+  x < proj1_sig f <-> (round_toward_negative p x < f)%float.
+Proof.  
+  rewrite Qlt_nge, float_lt_nge; apply negate_iff, round_toward_negative_spec.
+Qed.
+
 (* Having defined round_toward_negative the hard way, we can define
    round_toward_positive easily in terms of round_toward_negative. *)
 
@@ -255,6 +263,21 @@ Proof.
 
   apply round_toward_negative_spec.
   apply float_incl_opp.
+Qed.
+
+Lemma round_toward_positive_spec_lt p x (f : binary_float p) :
+  proj1_sig f < x  <->  (f < round_toward_positive p x)%float.
+Proof.
+  rewrite Qlt_nge, float_lt_nge; apply negate_iff, round_toward_positive_spec.
+Qed.
+
+Lemma round_toward_positive_monotonic p x y :
+  x <= y  ->  (round_toward_positive p x <= round_toward_positive p y)%float.
+Proof.
+  intro x_le_y.
+  rewrite <- round_toward_positive_spec.
+  apply Qle_trans with (1 := x_le_y).
+  apply round_toward_positive_spec, float_le_refl.
 Qed.
 
 (* Now for round_toward_zero: we use round_toward_negative if 0 < x,
@@ -327,8 +350,34 @@ Definition round_ties_to_even p x : binary_float p :=
   | right x_nonzero => _rte_nonzero p x x_nonzero
   end.
 
+(* Lemma that we'll need for the main theorem: the only discontinuities
+   of round_toward_negative are elements of binary_float p.  Here's a way
+   to state that result: if x <= y and round(x) != round(y), then there's
+   an element of binary_float p in [x, y] *)
 
+Lemma round_toward_negative_discontinuities p (x y : Q) :
+  x <= y  ->
+  (round_toward_negative p x <> round_toward_negative p y)%float ->
+  exists (z : binary_float p), x <= proj1_sig z <= y.
+Proof.
+  intros; exists (round_toward_negative p y); split.
+  - apply Qlt_le_weak, round_toward_negative_spec_lt, float_le_not_eq;
+    try apply round_toward_negative_monotonic; easy.
+  - apply round_toward_negative_spec, float_le_refl.
+Qed.
 
+(* And the corresponding result for round_toward_positive. *)
 
-        
-        
+Lemma round_toward_positive_discontinuities p (x y : Q) :
+  x <= y ->
+  (round_toward_positive p x  <>  round_toward_positive p y)%float ->
+  exists (z : binary_float p), x <= proj1_sig z <= y.
+Proof.
+  intros H H0; exists (round_toward_positive p x); split.
+  - apply round_toward_positive_spec, float_le_refl.
+  - apply Qlt_le_weak, round_toward_positive_spec_lt,
+    float_le_not_eq with (2 := H0); now apply round_toward_positive_monotonic.
+Qed.
+
+(* For round_ties_to_even, we don't have a spec available, so the
+   result is going to be harder. *)

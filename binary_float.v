@@ -162,6 +162,9 @@ Definition float_le p (x y : binary_float p) : Prop :=
 Definition float_eq p (x y : binary_float p) : Prop :=
   proj1_sig x == proj1_sig y.
 
+Definition float_lt p (x y : binary_float p) : Prop :=
+  proj1_sig x < proj1_sig y.
+
 Definition float_opp p (x : binary_float p) : binary_float p.
 Proof.
   refine (exist _ (- (proj1_sig x)) _); destruct x;
@@ -169,10 +172,12 @@ Proof.
 Defined.
 
 
+Infix "<" := float_lt : float_scope.
 Infix "<=" := float_le : float_scope.
 Infix "==" := float_eq : float_scope.
 Notation "0" := (zero_float _) : float_scope.
 Notation "- x" := (float_opp x) : float_scope.
+Notation "x <> y" := (~ (float_eq x y)) : float_scope.
 
 Open Scope float.
 
@@ -231,4 +236,16 @@ Lemma le_neg_switch p (x y : binary_float p) : -x <= y <-> -y <= x.
 Proof.
   unfold float_le; repeat rewrite float_incl_opp;
   split; intro; now apply remedial.le_neg_switch.
+Qed.
+
+Lemma float_lt_nge p (x y : binary_float p) :
+  x < y  <->  ~ (y <= x).
+Proof.
+  apply Qlt_nge.
+Qed.
+
+Lemma float_le_not_eq p (x y : binary_float p) :
+  x <= y -> ~(x == y) -> x < y.
+Proof.
+  apply Qle_not_eq.
 Qed.
