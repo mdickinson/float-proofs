@@ -274,16 +274,7 @@ Proof.
   intro; rewrite <- Zle_Qle; now apply floor_spec.
 Qed.
 
-(* XXX This one's obvious, and not so useful.  It should be removed, and
-   integer_le_ceiling2 renamed to integer_le_ceiling. *)
-
 Lemma integer_le_ceiling (x y : Q) :
-  is_integer x -> x <= y -> inject_Z (ceiling x) <= y.
-Proof.
-  intros; apply floor_spec; apply ceiling_spec; now apply integer_le_floor.
-Qed.
-
-Lemma integer_le_ceiling2 (x y : Q) :
   is_integer y -> x <= y -> inject_Z (ceiling x) <= y.
 Proof.
   unfold is_integer; destruct 1 as [m H]; rewrite <- H; intro;
@@ -447,6 +438,23 @@ Proof.
   destruct (Z.even (floor q)); tauto.
 Qed.
 
+
+Lemma round_le_integer (n : Q) (q : Q) :
+  is_integer n  ->  q <= n  ->  inject_Z (round q) <= n.
+Proof.
+  destruct (round_floor_or_ceiling q) as [H | H]; rewrite H; intros.
+  - apply Qle_trans with (2 := H1).
+    apply floor_spec. apply Z.le_refl.
+  - now apply integer_le_ceiling.
+Qed.
+
+Lemma integer_le_round (n : Q) (q : Q) :
+  is_integer n  ->  n <= q  -> n <= inject_Z (round q).
+Proof.
+  destruct (round_floor_or_ceiling q) as [H | H]; rewrite H; intros.
+  - now apply integer_le_floor.
+  - apply Qle_trans with (1 := H1); apply ceiling_spec, Z.le_refl.
+Qed.
 
 Lemma Zeven_odd : forall n : Z, Z.even n = false  <->  Z.odd n = true.
 Proof.

@@ -1183,18 +1183,6 @@ End SecondSeparationTheorem.
 
 End SeparationTheorems.
 
-Lemma integer_le_ceiling2 x y : is_integer y -> x <= y -> inject_Z (ceiling x) <= y.
-Proof.
-  intros.
-  destruct H.
-  rewrite <- H.
-  SearchAbout (inject_Z _ <= inject_Z _).
-  rewrite <- Zle_Qle.
-  apply ceiling_spec.
-  rewrite H.
-  assumption.
-Qed.
-
 Section RoundingForNonzero.
 
 (* The precision that we're going to round to, and the value that we're
@@ -1229,9 +1217,6 @@ Qed.
 Definition _round_toward_negative_for_nonzero := floorQ (x / scale) * scale.
 
 
-Check integer_le_ceiling.
-
-
 Lemma _rounded_representable :
   representable p _round_toward_negative_for_nonzero.
 Proof.
@@ -1243,7 +1228,7 @@ Proof.
     apply scaled_x_bounded.
   - rewrite <- inject_Z_opp.
     rewrite neg_floor_is_ceiling_neg.
-    apply integer_le_ceiling2.
+    apply integer_le_ceiling.
     apply is_integer_twopower.
     easy.
     apply lhs_negative_le.

@@ -138,6 +138,18 @@ Definition float_from_significand_and_exponent p m e
   (m_bounded : Qabs (inject_Z m) <= twopowerQ ('p)) : binary_float p :=
   exist _ _ (representable_le_bound p m e m_bounded).
 
+(* An obvious fact: a rational number x is representable iff its
+   the image of a binary float. *)
+
+Lemma binary_floats_are_representable p x :
+  representable p x  <->  exists (y : binary_float p), proj1_sig y == x.
+Proof.
+  split.
+  - intro H. exists (exist _ x H). easy.
+  - destruct 1 as [y H]. destruct y. simpl in H.
+    now rewrite <- H.
+Qed.
+
 (* Some basic notation in the domain of floats. *)
 
 Delimit Scope float_scope with float.
@@ -150,10 +162,17 @@ Definition float_le p (x y : binary_float p) : Prop :=
 Definition float_eq p (x y : binary_float p) : Prop :=
   proj1_sig x == proj1_sig y.
 
+Definition float_opp p (x : binary_float p) : binary_float p.
+Proof.
+  refine (exist _ (- (proj1_sig x)) _); destruct x;
+  now apply neg_representable_is_representable.
+Defined.
+
 
 Infix "<=" := float_le : float_scope.
 Infix "==" := float_eq : float_scope.
 Notation "0" := (zero_float _) : float_scope.
+Notation "- x" := (float_opp x) : float_scope.
 
 Open Scope float.
 
@@ -179,3 +198,37 @@ Add Parametric Relation (p : positive) : (binary_float p) (@float_eq p)
     symmetry proved by (@float_eq_symmetry p)
     transitivity proved by (@float_eq_transitivity p)
       as EqualFloat.
+
+
+Lemma float_le_antisymm p (x y : binary_float p) :
+  x <= y  ->  y <= x  ->  x == y.
+Proof.
+  apply Qle_antisym.
+Qed.
+
+
+Lemma float_le_refl p (x : binary_float p) : x <= x.
+Proof.
+  apply Qle_refl.
+Qed.
+
+
+Lemma float_le_trans p (x y z : binary_float p) :
+  x <= y -> y <= z -> x <= z.
+Proof.
+  apply Qle_trans with (y := proj1_sig y).
+Qed.
+
+
+Lemma float_incl_opp p (x : binary_float p) :
+  (proj1_sig (- x)%float == - proj1_sig x)%Q.
+Proof.
+  easy.
+Qed.
+
+
+Lemma le_neg_switch p (x y : binary_float p) : -x <= y <-> -y <= x.
+Proof.
+  unfold float_le; repeat rewrite float_incl_opp;
+  split; intro; now apply remedial.le_neg_switch.
+Qed.

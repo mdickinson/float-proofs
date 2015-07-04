@@ -60,9 +60,11 @@ Ltac twopower_collect :=
 
 Ltac twopower_cleanup :=
   try match goal with
-  | [ |- _ * twopowerQ 0 <= _ ] => replace (twopowerQ 0) with 1 by easy;
-      rewrite Qmult_1_r
-  end.
+      | [ |- _ * twopowerQ 0 <= _ ] => replace (twopowerQ 0) with 1 by easy;
+          rewrite Qmult_1_r
+      | [ |- 0 * twopowerQ _ <= _ ] => rewrite Qmult_0_l
+      | [ |- _ <= 0 * twopowerQ _ ] => rewrite Qmult_0_l
+      end.
 
 
 Ltac twopower_exponent_simplify :=
@@ -77,25 +79,6 @@ Ltac twopower_left := twopower_prepare; twopower_r_to_l; twopower_collect;
                       twopower_exponent_simplify; twopower_cleanup.
 Ltac twopower_right := twopower_prepare; twopower_l_to_r; twopower_collect;
                       twopower_exponent_simplify; twopower_cleanup.
-
-
-
-(* Twopower cases we have to deal with:
-
-   _ / twopowerQ _ <= twopowerQ _
-
-   - (_ / twopowerQ _) <= twopowerQ _
-
-   _ <= _ * twopowerQ _
-
-   twopowerQ _ <= _ / twopowerQ _
-
-   _ / twopowerQ e <= _ / twopowerQ e
-
-   - (_ / twopowerQ e) <= - (_ / twopowerQ e)
-
-   *)
-
 
 
 (* There are two cases: x is zero, or x is nonzero. Let's first assume that x
@@ -122,7 +105,7 @@ Proof.
     apply Qlt_le_weak, Qle_lt_trans with (1 := Qle_Qabs _),
                                          (twopowerQ_binadeQ_lt _ _ x_nonzero); omega.
   - setoid_rewrite <- inject_Z_opp; setoid_rewrite neg_floor_is_ceiling_neg;
-    apply integer_le_ceiling2; [ now apply is_integer_twopowerQ | ];
+    apply integer_le_ceiling; [ now apply is_integer_twopowerQ | ];
     twopower_right;
     apply Qlt_le_weak, Qle_lt_trans with (1 := Qle_Qabs_neg _),
       (twopowerQ_binadeQ_lt _ _ x_nonzero); omega.
@@ -211,3 +194,141 @@ Proof.
     apply Qle_trans with (1 := H); twopower_right; apply floor_spec;
     apply Z.le_refl.
 Qed.
+
+(* With the specification in place, it's straightforward to prove some
+   of the basic properties of round_toward_negative. *)
+
+Add Parametric Morphism (p : positive) : (round_toward_negative p) with
+    signature Qeq ==> (@float_eq p) as round_toward_negative_morphism.
+Proof.
+  intros x y x_eq_y; apply float_le_antisymm;
+  rewrite <- round_toward_negative_spec; [ rewrite <- x_eq_y | rewrite x_eq_y ];
+  apply round_toward_negative_spec; apply float_le_refl.
+Qed.
+
+
+Add Parametric Morphism (p : positive) : (proj1_sig (A:=Q) (P:=representable p)) with
+    signature (@float_eq p) ==> Qeq as inclusion_morphism.
+Proof.
+  intros x y.
+  unfold float_eq.
+  easy.
+Qed.
+
+Lemma round_toward_negative_monotonic (p : positive) x y :
+  x <= y  ->  (round_toward_negative p x <= round_toward_negative p y)%float.
+Proof.
+  intro. rewrite <- round_toward_negative_spec.
+  apply Qle_trans with (y := x).
+  apply round_toward_negative_spec. apply float_le_refl. easy.
+Qed.
+
+Lemma round_toward_negative_id (p : positive) x :
+  representable p x  <->  proj1_sig (round_toward_negative p x) == x.
+Proof.
+  rewrite binary_floats_are_representable.
+  split; intro.
+  destruct H.
+  rewrite <- H.
+  apply Qle_antisym.
+  rewrite round_toward_negative_spec.
+  apply float_le_refl.
+  fold (float_le (x0) (round_toward_negative p (proj1_sig x0))).
+  rewrite <- round_toward_negative_spec. apply Qle_refl.
+
+  now exists (round_toward_negative p x).
+Qed.
+
+(* Having defined round_toward_negative the hard way, we can define
+   round_toward_positive easily in terms of round_toward_negative. *)
+
+Definition round_toward_positive p x : binary_float p :=
+  (- round_toward_negative p (-x))%float.
+
+Lemma round_toward_positive_spec p x (f : binary_float p) :
+  x <= proj1_sig f  <->  (round_toward_positive p x <= f)%float.
+Proof.
+  unfold round_toward_positive.
+  rewrite Qopp_le_mono.
+  setoid_replace (- proj1_sig f) with (proj1_sig (-f)%float).
+  rewrite le_neg_switch.
+
+  apply round_toward_negative_spec.
+  apply float_incl_opp.
+Qed.
+
+(* Now for round_toward_zero: we use round_toward_negative if 0 < x,
+   and round_toward_positive if x <= 0. *)
+
+Definition round_toward_zero p x : binary_float p :=
+  if (Qlt_le_dec 0 x) then round_toward_negative p x else round_toward_positive p x.
+
+(* We're left with round_ties_to_even. It may be easier to define
+   from first principles rather than mashing round_toward_negative
+   and round_toward_positive together. *)
+
+Section RoundTiesToEvenNonzero.
+
+  Variable p : positive.
+  Variable x : Q.
+
+  Hypothesis x_nonzero : ~(x == 0).
+
+  Let exponent : Z := (binadeQ x x_nonzero - (' p) + 1)%Z.
+  Let scale : Q := twopowerQ exponent.
+  Let significand : Z := round (x / scale).
+
+  (* Prove that the significand is bounded. *)
+  Lemma _rte_significand_bound : Qabs (inject_Z significand) <= twopowerQ (' p).
+  Proof.
+    (* Split into cases 0 <= x and x <= 0. *)
+    subst significand scale exponent; destruct (Qle_ge_cases 0 x).
+    - rewrite Qabs_pos.
+      + apply round_le_integer.
+        apply is_integer_twopowerQ.
+        easy.
+        twopower_right.
+        apply Qle_trans with (y := Qabs x).
+        apply Qle_Qabs.
+        apply Qlt_le_weak.
+        apply (twopowerQ_binadeQ_lt _ _ x_nonzero).
+        omega.
+      + apply integer_le_round.
+        now (exists 0%Z).
+        now twopower_left.
+    - (* Case x <= 0. *)
+      rewrite Qabs_neg.
+      + apply remedial.le_neg_switch.
+        apply integer_le_round.
+        apply is_integer_neg.
+        apply is_integer_twopowerQ.
+        easy.
+        apply remedial.le_neg_switch.
+        twopower_right.
+        apply Qle_trans with (y := Qabs x).
+        apply Qle_Qabs_neg.
+        apply Qlt_le_weak.
+        apply (twopowerQ_binadeQ_lt _ _ x_nonzero).
+        omega.
+      + apply round_le_integer.
+        now (exists 0%Z).
+        now twopower_right.
+  Qed.
+
+  Definition _rte_nonzero : binary_float p :=
+    float_from_significand_and_exponent p significand exponent
+                                        _rte_significand_bound.
+
+End RoundTiesToEvenNonzero.
+
+Definition round_ties_to_even p x : binary_float p :=
+  match Qeq_dec x 0 with
+  | left _ => zero_float p
+  | right x_nonzero => _rte_nonzero p x x_nonzero
+  end.
+
+
+
+
+        
+        
