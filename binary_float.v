@@ -171,7 +171,6 @@ Proof.
   now apply neg_representable_is_representable.
 Defined.
 
-
 Infix "<" := float_lt : float_scope.
 Infix "<=" := float_le : float_scope.
 Infix "==" := float_eq : float_scope.
@@ -203,6 +202,13 @@ Add Parametric Relation (p : positive) : (binary_float p) (@float_eq p)
     symmetry proved by (@float_eq_symmetry p)
     transitivity proved by (@float_eq_transitivity p)
       as EqualFloat.
+
+
+Add Parametric Morphism (p : positive) : (@float_opp p) with
+    signature (@float_eq p) ==> (@float_eq p) as float_opp_morphism.
+Proof.
+  unfold float_opp, float_eq; intros x y H; simpl; now rewrite H.
+Qed.
 
 
 Lemma float_le_antisymm p (x y : binary_float p) :

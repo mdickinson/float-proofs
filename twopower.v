@@ -489,3 +489,26 @@ Lemma binadeQ_monotonic x (x_nonzero : ~(x == 0)) y (y_nonzero : ~(y == 0)) :
 Proof.
   intro; unfold binadeQ; now apply binade_monotonic.
 Qed.
+
+Lemma binadeQ_equiv x (x_nonzero : ~(x == 0)) y (y_nonzero : ~(y == 0)) :
+  x == y  ->  binadeQ x x_nonzero = binadeQ y y_nonzero.
+Proof.
+  intro H; unfold binadeQ; apply binade_morphism.
+  unfold QPos.eq. simpl. now rewrite H.
+Qed.
+
+Lemma binadeQ_opp x (x_nonzero : ~(x == 0)) (neg_x_nonzero : ~(-x == 0)) :
+  binadeQ x x_nonzero = binadeQ (-x) neg_x_nonzero.
+Proof.
+  unfold binadeQ; apply binade_morphism.
+  unfold QPos.eq. setoid_replace (Qabs (-x)) with (Qabs x).
+  reflexivity.
+  apply Qabs_opp.
+Qed.
+
+Lemma Qabs_twopowerQ n :
+  Qabs (twopowerQ n) == twopowerQ n.
+Proof.
+  apply Qabs_pos, Qlt_le_weak, twopowerQ_positive.
+Qed.
+

@@ -55,6 +55,11 @@ Proof.
   intro H; rewrite H; apply Qle_refl.
 Qed.
 
+Lemma Qabs_Zabs (x : Z) : Qabs (inject_Z x) == inject_Z (Z.abs x).
+Proof.
+  now unfold Qabs.
+Qed.
+
 (* The floor function can be defined in terms of the standard library
    / operator, which does Euclidean division. *)
 
@@ -524,4 +529,27 @@ Proof.
   absurd (q - inject_Z (floor q) == 1 # 2).
     auto with qarith.
     now apply tie_characterization.
+Qed.
+
+Lemma Qabs_floor_le x y :
+  is_integer y  ->  Qabs x <= y  ->  Qabs (inject_Z (floor x)) <= y.
+Proof.
+  destruct 1 as [m m_eq_y]; rewrite <- m_eq_y;
+  rewrite Qabs_Zabs; rewrite <- Zle_Qle; apply abs_floor_le.
+Qed.
+
+Lemma Qabs_ceiling_le x y :
+  is_integer y  ->  Qabs x <= y  ->  Qabs (inject_Z (ceiling x)) <= y.
+Proof.
+  destruct 1 as [m m_eq_y]; rewrite <- m_eq_y; 
+  rewrite Qabs_Zabs; rewrite <- Zle_Qle; apply abs_ceiling_le.
+Qed.
+
+Lemma Qabs_round_le x y :
+  is_integer y  ->  Qabs x <= y  ->  Qabs (inject_Z (round x)) <= y.
+Proof.
+  intros;
+  destruct (round_floor_or_ceiling x) as [Hfloor | Hceiling].
+  - rewrite Hfloor; now apply Qabs_floor_le.
+  - rewrite Hceiling; now apply Qabs_ceiling_le.
 Qed.

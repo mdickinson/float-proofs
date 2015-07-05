@@ -42,6 +42,8 @@ Ltac twopower_prepare :=
           by (field; apply twopowerQ_nonzero)
       | [ |- - (?n * twopowerQ ?e) <= _ ] =>
         setoid_replace (- (n * twopowerQ e)) with ((-n) * twopowerQ e) by ring
+      | [ |- Qabs (_ / twopowerQ ?e) <= _ ] =>
+        rewrite Qabs_div, Qabs_twopowerQ; [ | apply twopowerQ_nonzero ]
       end.
 
 (* Tactics to be applied post moving powers of two around. *)
@@ -84,47 +86,73 @@ Ltac twopower_right := twopower_prepare; twopower_l_to_r; twopower_collect;
 (* There are two cases: x is zero, or x is nonzero. Let's first assume that x
    is nonzero. Then we can construct the significand and exponent directly. *)
 
-Section RoundTowardNegativeNonzero.
+Section RoundingForNonzero.
 
-Variable p : positive.
-Variable x : Q.
+  Variable p : positive.
+  Variable x : Q.
+  Hypothesis x_nonzero : ~(x == 0).
 
-Hypothesis x_nonzero : ~(x == 0).
+  Let exponent : Z := (binadeQ x x_nonzero - (' p) + 1)%Z.
+  Let scale : Q := twopowerQ exponent.
 
-Let exponent : Z := (binadeQ x x_nonzero - (' p) + 1)%Z.
-Let scale : Q := twopowerQ exponent.
-Let significand : Z := floor (x / scale).
+  Lemma _rtn_significand_bound :
+    Qabs (inject_Z (floor (x / scale))) <= twopowerQ (' p).
+  Proof.
+    apply Qabs_floor_le; [now apply is_integer_twopowerQ |];
+    subst scale exponent; twopower_right;
+    apply Qlt_le_weak; apply (twopowerQ_binadeQ_lt _ _ x_nonzero); omega.
+  Qed.
 
-(* Prove that the significand is bounded. *)
+  Lemma _rtp_significand_bound :
+    Qabs (inject_Z (ceiling (x / scale))) <= twopowerQ (' p).
+  Proof.
+    apply Qabs_ceiling_le; [now apply is_integer_twopowerQ |];
+    subst scale exponent; twopower_right;
+    apply Qlt_le_weak; apply (twopowerQ_binadeQ_lt _ _ x_nonzero); omega.
+  Qed.
 
-Lemma _rtn_significand_bound : Qabs (inject_Z significand) <= twopowerQ (' p).
-Proof.
-  apply Qabs_case; intros _; subst significand scale exponent.
-  - apply floor_spec, floor_monotonic;
-    twopower_right;
-    apply Qlt_le_weak, Qle_lt_trans with (1 := Qle_Qabs _),
-                                         (twopowerQ_binadeQ_lt _ _ x_nonzero); omega.
-  - setoid_rewrite <- inject_Z_opp; setoid_rewrite neg_floor_is_ceiling_neg;
-    apply integer_le_ceiling; [ now apply is_integer_twopowerQ | ];
-    twopower_right;
-    apply Qlt_le_weak, Qle_lt_trans with (1 := Qle_Qabs_neg _),
-      (twopowerQ_binadeQ_lt _ _ x_nonzero); omega.
-Qed.
+  Lemma _rte_significand_bound :
+    Qabs (inject_Z (round (x / scale))) <= twopowerQ (' p).
+  Proof.
+    apply Qabs_round_le; [now apply is_integer_twopowerQ | ];
+    subst scale exponent; twopower_right;
+    apply Qlt_le_weak; apply (twopowerQ_binadeQ_lt _ _ x_nonzero); omega.
+  Qed.
 
-Definition _rtn_nonzero : binary_float p :=
-  float_from_significand_and_exponent p significand exponent
-                                      _rtn_significand_bound.
-
-End RoundTowardNegativeNonzero.
-
-(* Now we can finally define the round_toward_negative rounding mode. *)
+End RoundingForNonzero.
 
 Definition round_toward_negative p x : binary_float p :=
   match Qeq_dec x 0 with
-  | left _ => zero_float p
-  | right x_nonzero => _rtn_nonzero p x x_nonzero
+  | left x_zero => zero_float p
+  | right x_nonzero =>
+      let exponent := (binadeQ x x_nonzero - (' p) + 1)%Z in
+      let scale : Q := twopowerQ exponent in
+      let significand := floor (x / scale) in
+      float_from_significand_and_exponent p significand exponent (
+                                            _rtn_significand_bound _ _ _)
   end.
 
+Definition round_toward_positive p x : binary_float p :=
+  match Qeq_dec x 0 with
+  | left x_zero => zero_float p
+  | right x_nonzero =>
+      let exponent := (binadeQ x x_nonzero - (' p) + 1)%Z in
+      let scale : Q := twopowerQ exponent in
+      let significand := ceiling (x / scale) in
+      float_from_significand_and_exponent p significand exponent (
+                                            _rtp_significand_bound _ _ _)
+  end.
+
+Definition round_ties_to_even p x : binary_float p :=
+  match Qeq_dec x 0 with
+  | left x_zero => zero_float p
+  | right x_nonzero =>
+      let exponent := (binadeQ x x_nonzero - (' p) + 1)%Z in
+      let scale : Q := twopowerQ exponent in
+      let significand := round (x / scale) in
+      float_from_significand_and_exponent p significand exponent (
+                                            _rte_significand_bound _ _ _)
+  end.
 
 Lemma round_toward_negative_spec (p : positive) (x : Q) (f : binary_float p) :
   proj1_sig f <= x   <->  (f <= round_toward_negative p x)%float.
@@ -195,6 +223,7 @@ Proof.
     apply Z.le_refl.
 Qed.
 
+
 (* With the specification in place, it's straightforward to prove some
    of the basic properties of round_toward_negative. *)
 
@@ -207,11 +236,39 @@ Proof.
 Qed.
 
 
+Add Parametric Morphism (p : positive) : (round_toward_positive p)
+    with signature Qeq ==> (@float_eq p) as round_toward_positive_morphism.
+Proof.
+  intros; unfold round_toward_positive, float_eq;
+  destruct (Qeq_dec x 0), (Qeq_dec y 0).
+  - easy.
+  - contradict n. now rewrite <- H.
+  - contradict n. now rewrite H.
+  - simpl.
+    assert (binadeQ y n0 = binadeQ x n)%Z by (now apply binadeQ_equiv).
+    rewrite H0.
+    now setoid_rewrite <- H.
+Qed.
+
+(* XXX This one should go elsewhere. *)
+
 Add Parametric Morphism (p : positive) : (proj1_sig (A:=Q) (P:=representable p)) with
     signature (@float_eq p) ==> Qeq as inclusion_morphism.
 Proof.
   intros x y.
   unfold float_eq.
+  easy.
+Qed.
+
+(* XXX And this one, too. *)
+
+Add Parametric Morphism (p : positive) : (@float_le p)
+    with signature (@float_eq p) ==> (@float_eq p) ==> iff as float_le_morphism.
+Proof.
+  unfold float_eq, float_le.
+  intros.
+  rewrite H.
+  rewrite H0.
   easy.
 Qed.
 
@@ -243,33 +300,66 @@ Qed.
 
 Lemma round_toward_negative_spec_lt p x (f : binary_float p) :
   x < proj1_sig f <-> (round_toward_negative p x < f)%float.
-Proof.  
+Proof.
   rewrite Qlt_nge, float_lt_nge; apply negate_iff, round_toward_negative_spec.
 Qed.
 
-(* Having defined round_toward_negative the hard way, we can define
-   round_toward_positive easily in terms of round_toward_negative. *)
+(* Results for round_toward_positive. *)
 
-Definition round_toward_positive p x : binary_float p :=
-  (- round_toward_negative p (-x))%float.
+Lemma round_toward_positive_opp p x :
+  (- round_toward_negative p x == round_toward_positive p (-x))%float.
+Proof.
+  unfold round_toward_negative, round_toward_positive, float_eq.
+  destruct (Qeq_dec x 0), (Qeq_dec (-x) 0); simpl.
+  - easy.
+  - contradict n; now rewrite q.
+  - contradict n; rewrite <- Qopp_opp; now rewrite q.
+  - assert (binadeQ x n = binadeQ (-x) n0)%Z as H by (apply binadeQ_opp).
+    rewrite H.
+    match goal with
+    | [ |- - (?x * ?y) == _] => setoid_replace (-(x*y)) with ((-x) * y) by ring
+    end.
+    apply Qmult_inj_r with (1 := twopowerQ_nonzero _).
+    rewrite <- inject_Z_opp.
+    apply inject_Z_injective.
+    rewrite neg_floor_is_ceiling_neg.
+    apply ceiling_morphism.
+    field.
+    apply twopowerQ_nonzero.
+Qed.
+
 
 Lemma round_toward_positive_spec p x (f : binary_float p) :
   x <= proj1_sig f  <->  (round_toward_positive p x <= f)%float.
 Proof.
-  unfold round_toward_positive.
-  rewrite Qopp_le_mono.
-  setoid_replace (- proj1_sig f) with (proj1_sig (-f)%float).
-  rewrite le_neg_switch.
+  setoid_replace x with (- - x) at 2 by ring.
+  rewrite <- round_toward_positive_opp.
+  setoid_replace (- round_toward_negative p (-x) <= f)%float
+  with (-f <= round_toward_negative p (-x))%float.
+  rewrite <- round_toward_negative_spec.
 
-  apply round_toward_negative_spec.
-  apply float_incl_opp.
+  split; intros.
+  apply le_neg_switch_r.
+  setoid_replace (- proj1_sig (-f)%float) with (proj1_sig f).
+  easy.
+  unfold float_opp, float_eq. simpl. ring.
+  setoid_replace (proj1_sig f) with (- proj1_sig (-f)%float).
+  apply le_neg_switch_r.
+  easy.
+  unfold float_opp, float_eq. simpl. ring.
+
+  split; intros.
+  now apply le_neg_switch.
+  now apply le_neg_switch.
 Qed.
+
 
 Lemma round_toward_positive_spec_lt p x (f : binary_float p) :
   proj1_sig f < x  <->  (f < round_toward_positive p x)%float.
 Proof.
   rewrite Qlt_nge, float_lt_nge; apply negate_iff, round_toward_positive_spec.
 Qed.
+
 
 Lemma round_toward_positive_monotonic p x y :
   x <= y  ->  (round_toward_positive p x <= round_toward_positive p y)%float.
@@ -279,76 +369,6 @@ Proof.
   apply Qle_trans with (1 := x_le_y).
   apply round_toward_positive_spec, float_le_refl.
 Qed.
-
-(* Now for round_toward_zero: we use round_toward_negative if 0 < x,
-   and round_toward_positive if x <= 0. *)
-
-Definition round_toward_zero p x : binary_float p :=
-  if (Qlt_le_dec 0 x) then round_toward_negative p x else round_toward_positive p x.
-
-(* We're left with round_ties_to_even. It may be easier to define
-   from first principles rather than mashing round_toward_negative
-   and round_toward_positive together. *)
-
-Section RoundTiesToEvenNonzero.
-
-  Variable p : positive.
-  Variable x : Q.
-
-  Hypothesis x_nonzero : ~(x == 0).
-
-  Let exponent : Z := (binadeQ x x_nonzero - (' p) + 1)%Z.
-  Let scale : Q := twopowerQ exponent.
-  Let significand : Z := round (x / scale).
-
-  (* Prove that the significand is bounded. *)
-  Lemma _rte_significand_bound : Qabs (inject_Z significand) <= twopowerQ (' p).
-  Proof.
-    (* Split into cases 0 <= x and x <= 0. *)
-    subst significand scale exponent; destruct (Qle_ge_cases 0 x).
-    - rewrite Qabs_pos.
-      + apply round_le_integer.
-        apply is_integer_twopowerQ.
-        easy.
-        twopower_right.
-        apply Qle_trans with (y := Qabs x).
-        apply Qle_Qabs.
-        apply Qlt_le_weak.
-        apply (twopowerQ_binadeQ_lt _ _ x_nonzero).
-        omega.
-      + apply integer_le_round.
-        now (exists 0%Z).
-        now twopower_left.
-    - (* Case x <= 0. *)
-      rewrite Qabs_neg.
-      + apply remedial.le_neg_switch.
-        apply integer_le_round.
-        apply is_integer_neg.
-        apply is_integer_twopowerQ.
-        easy.
-        apply remedial.le_neg_switch.
-        twopower_right.
-        apply Qle_trans with (y := Qabs x).
-        apply Qle_Qabs_neg.
-        apply Qlt_le_weak.
-        apply (twopowerQ_binadeQ_lt _ _ x_nonzero).
-        omega.
-      + apply round_le_integer.
-        now (exists 0%Z).
-        now twopower_right.
-  Qed.
-
-  Definition _rte_nonzero : binary_float p :=
-    float_from_significand_and_exponent p significand exponent
-                                        _rte_significand_bound.
-
-End RoundTiesToEvenNonzero.
-
-Definition round_ties_to_even p x : binary_float p :=
-  match Qeq_dec x 0 with
-  | left _ => zero_float p
-  | right x_nonzero => _rte_nonzero p x x_nonzero
-  end.
 
 (* Lemma that we'll need for the main theorem: the only discontinuities
    of round_toward_negative are elements of binary_float p.  Here's a way
@@ -378,6 +398,3 @@ Proof.
   - apply Qlt_le_weak, round_toward_positive_spec_lt,
     float_le_not_eq with (2 := H0); now apply round_toward_positive_monotonic.
 Qed.
-
-(* For round_ties_to_even, we don't have a spec available, so the
-   result is going to be harder. *)
