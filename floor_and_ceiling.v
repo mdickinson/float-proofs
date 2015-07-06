@@ -553,3 +553,64 @@ Proof.
   - rewrite Hfloor; now apply Qabs_floor_le.
   - rewrite Hceiling; now apply Qabs_ceiling_le.
 Qed.
+
+Lemma round_closer_than_floor q :
+  Qabs (q - inject_Z (round q)) <= Qabs (q - inject_Z (floor q)).
+Proof.
+  unfold round.
+  destruct (q - inject_Z (floor q) ?= 1 # 2) eqn:H.
+  - (* Case equal. *)
+    case (Z.even (floor q)).
+    + apply Qle_refl.  (* Case floor q even; round = floor. *)
+    + (* Case floor q odd, round = ceiling. *)
+      assert (q - inject_Z (floor q) == 1#2) by (now apply Qeq_alt).
+      rewrite H0.
+      setoid_replace (q - inject_Z (ceiling q)) with (-1#2); [easy | ].
+      assert (ceiling q = floor q + 1)%Z.
+      apply floor_ceiling_gap.
+      intro.
+      assert (inject_Z (floor q) == q) by (now apply floor_integer).
+      rewrite H2 in H.
+      setoid_replace (q - q) with 0 in H by ring.
+      now contradict H.
+      rewrite H1.
+      rewrite inject_Z_plus.
+      ring_simplify in H0.
+      ring_simplify.
+      rewrite H0.
+      ring.
+  - (* Case Lt *)
+    apply Qle_refl.
+  - (* Case Gt *)
+    assert (1#2 < q - inject_Z (floor q)) by (now apply Qgt_alt).
+    apply Qle_trans with (y := 1#2).
+
+    apply Qlt_le_weak.
+    rewrite Qabs_neg.
+    assert (ceiling q = floor q + 1)%Z.
+    apply floor_ceiling_gap.
+    intro.
+    assert (inject_Z (floor q) == q) by (now apply floor_integer).
+    rewrite H2 in H0.
+    ring_simplify in H0.
+    now contradict H0.
+    rewrite H1.
+    apply Qneg_le.
+    rewrite inject_Z_plus.
+    apply Qplus_lt_l with (z := 1).
+    ring_simplify.
+    now ring_simplify in H0.
+
+    apply Qplus_le_r with (z := inject_Z (ceiling q)).
+    ring_simplify.
+    apply ceiling_spec. apply Z.le_refl.
+
+    rewrite Qabs_pos.
+    apply Qlt_le_weak.
+    easy.
+
+    apply Qplus_le_r with (z := inject_Z (floor q)).
+    ring_simplify.
+    apply floor_spec.
+    apply Z.le_refl.
+Qed.

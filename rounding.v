@@ -398,3 +398,19 @@ Proof.
   - apply Qlt_le_weak, round_toward_positive_spec_lt,
     float_le_not_eq with (2 := H0); now apply round_toward_positive_monotonic.
 Qed.
+
+(* Now we need to get some handle on round_ties_to_even.
+
+   For example, we want to show that round_ties_to_even x
+   is the closest float to x; i.e., that for any float f,
+
+    | round x - x| <=  | f - x |
+
+   Sketch of proof: consider the cases f <= x and x <= f.
+
+   If f <= x then f <= round_down x, and so
+
+    | round x - x | <= | x - round_down x | == x - round_down x
+                    <= x - f == | f - x |.
+
+   The case x <= f is analogous. *)
