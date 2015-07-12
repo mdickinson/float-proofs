@@ -8,6 +8,7 @@ Open Scope Q.
 Notation "x <> y" := (~ (x == y)) : Q_scope.
 Notation "x <= y < z" := (x <= y /\ y < z) : Q_scope.
 Notation "x < y <= z" := (x < y /\ y <= z) : Q_scope.
+Notation "x < y < z" := (x < y /\ y < z) : Q_scope.
 
 Lemma lt_neg_switch x y : x < -y -> y < -x.
 Proof.

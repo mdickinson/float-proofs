@@ -6,6 +6,9 @@ Require Import ZArith.
 Require Import QArith.
 Require Import Qabs.
 
+Require Import remedial.
+Require Import rearrange_tactic.
+
 (* Helper lemmas that we'll need later in the module. *)
 
 Lemma negate_iff : forall P Q, (P <-> Q)  ->  (~P <-> ~Q).
@@ -305,10 +308,13 @@ Qed.
 
 
 Lemma floor_eq_ceiling (q : Q) :
-  (floor q = ceiling q)%Z -> is_integer q.
+  is_integer q <-> (floor q = ceiling q)%Z.
 Proof.
-  intro; apply floor_integer; apply Qle_antisym;
-  [apply floor_spec | rewrite H ; apply ceiling_spec]; apply Zle_refl.
+  split.
+  - intro; apply inject_Z_injective; transitivity q;
+    [ apply floor_integer | symmetry; apply ceiling_integer ]; easy.
+  - intro; apply floor_integer; apply Qle_antisym;
+    [apply floor_spec | rewrite H ; apply ceiling_spec]; apply Zle_refl.
 Qed.
 
 
@@ -618,197 +624,171 @@ Qed.
 (* Let's see if we can do this better.  We start by classifying each rational
    based on its fractional part, or excess (defined as x - floor(x)). *)
 
-Inductive ExcessClass : Set :=
-| Exact  (* exact integer *)
-| Low    (* fractional part < 0.5 *)
-| Tie    (* fractional part == 0.5 *)
-| High.  (* fractional part > 0.5 *)
+Definition Qlt_eq_gt x y : {x < y} + {x == y} + {y < x}.
+Proof.
+  case_eq (Qcompare x y); intro.
+  - left; right; now apply Qeq_alt.
+  - left; left; now apply Qlt_alt.
+  - right; now apply Qgt_alt.
+Qed.
 
-(* Now we need a function that classifies the excess. *)
+Definition excess (q : Q) := q - inject_Z (floor q).
 
-Definition excess_class (q : Q) : ExcessClass :=
-  let excess := q - inject_Z (floor q) in
-  if Qeq_dec excess 0
-  then Exact
-  else match Qcompare excess (1#2) with
-       | Eq => Tie
-       | Lt => Low
-       | Gt => High
-       end.
+Lemma excess_nonnegative q : 0 <= excess q.
+Proof.
+  unfold excess.
+  assert (inject_Z (floor q) <= q) by (apply floor_spec; apply Z.le_refl).
+  rearrange.
+Qed.
 
-(* Redefinition of round, based on this classification. *)
+Lemma excess_less_than_one q : excess q < 1.
+Proof.
+  unfold excess.
+  assert (q < inject_Z (floor q + 1)).
+  apply floor_spec_lt.
+  omega.
+  rewrite inject_Z_plus in H.
+  rearrange.
+Qed.
+
+Inductive ExcessClass (q : Q) : Set :=
+| Exact : excess q == 0 -> ExcessClass q
+| Low : 0 < excess q -> excess q < 1#2 -> ExcessClass q
+| Tie : excess q == 1#2 -> ExcessClass q
+| High : 1#2 < excess q -> excess q < 1 -> ExcessClass q.
+
+Definition excess_class (q : Q) : ExcessClass q.
+Proof.
+  destruct (Qeq_dec (excess q) 0).
+  exact (Exact _ q0).
+  destruct (Qlt_eq_gt (excess q) (1#2)) as [[Hlt | Heq] | Hgt].
+  refine (Low q _ _); intuition.
+  apply Qle_not_eq.
+  apply excess_nonnegative.
+  intro. intuition.
+  exact (Tie q Heq).
+  refine (High q _ _); intuition.
+  apply excess_less_than_one.
+Defined.
+
 
 Definition round2 (q : Q) : Z :=
   match excess_class q with
-  | Exact => floor q
-  | Low => floor q
-  | High => ceiling q
-  | Tie => if Z.even (floor q) then floor q else ceiling q
+  | Exact _ => floor q
+  | Low _ _ => floor q
+  | Tie _ => if Z.even (floor q) then floor q else ceiling q
+  | High _ _ => ceiling q
   end.
 
-(* Lemmas about q - floor q and ceiling q - q for each of
-   the possible classifications. *)
 
-Lemma exact_floor q :
-  excess_class q = Exact  ->  q - inject_Z (floor q) == 0.
+Add Morphism excess : excess_morphism.
 Proof.
-  case_eq (excess_class q); unfold excess_class;
-  destruct (Qeq_dec (q - inject_Z (floor q)) 0);
-  case_eq (Qcompare (q - inject_Z (floor q)) (1#2));
-  congruence.
+  intros x y H; unfold excess; now rewrite ?H.
 Qed.
 
-Lemma exact_ceiling q :
-  excess_class q = Exact  ->  inject_Z (ceiling q) - q == 0.
+Add Morphism round2 : round2_morphism.
 Proof.
-  case_eq (excess_class q); unfold excess_class;
-  destruct (Qeq_dec (q - inject_Z (floor q)) 0);
-  case_eq (Qcompare (q - inject_Z (floor q)) (1#2));
-  try congruence; intros H _ _;
-  (setoid_replace (inject_Z (ceiling q)) with q; [ ring |
-    apply ceiling_integer, floor_integer;
-    apply Qplus_inj_r with (z := - inject_Z (floor q));
-    rewrite q0; ring ]).
+  intros x y H; unfold round2.
+  (destruct (excess_class x); [ | | case_eq (Z.even (floor x)) | ]);
+    (destruct (excess_class y); [ | | case_eq (Z.even (floor y)) | ]);
+  rewrite H in *;
+    (* 25 subgoals *)
+  try easy;
+  (* 12 subgoals *)
+  try (rewrite q in q0; now contradict q0);
+  try (rewrite q in q1; now contradict q1);
+  try (rewrite q1 in q0; now contradict q0).
+  (* 8 subgoals *)
+  assert (1#2 < 1#2) by now apply Qlt_trans with (y := excess y).
+  now contradict H0.
+  intros. rewrite H1 in H0. now contradict H0.
+  intros. rewrite H0 in H1. now contradict H1.
+  rewrite q1 in q; now contradict q.
+  assert (1#2 < 1#2) by now apply Qlt_trans with (y := excess y).
+  now contradict H0.
+  rewrite q1 in q; now contradict q.
 Qed.
 
-Lemma low_floor q :
-  excess_class q = Low  ->  q - inject_Z (floor q) < 1#2.
-Proof.
-  case_eq (excess_class q); unfold excess_class;
-  destruct (Qeq_dec (q - inject_Z (floor q)) 0);
-  case_eq (Qcompare (q - inject_Z (floor q)) (1#2));
-  try congruence; intros; now apply Qlt_alt.
-Qed.
-
-Lemma low_ceiling q :
-  excess_class q = Low  ->  1#2 < inject_Z (ceiling q) - q.
-Proof.
-  case_eq (excess_class q); unfold excess_class;
-  destruct (Qeq_dec (q - inject_Z (floor q)) 0);
-  case_eq (Qcompare (q - inject_Z (floor q)) (1#2));
-  try congruence; intros H _ _; apply Qlt_alt in H.
-  rewrite floor_ceiling_gap.
-  rewrite inject_Z_plus.
-  match goal with
-  | [ _ : ?a < ?b |- ?c < ?d ] =>
-    rewrite <- Qplus_lt_l with (z := a - c);
-      match goal with
-      | [ |- ?e < ?f ] =>
-        setoid_replace e with a by ring;
-          setoid_replace f with b by ring
-      end;
-      easy
-  end.
-  rewrite floor_integer.
-  contradict n. rewrite n. ring.
-Qed.
-
-
-Lemma tie_floor q :
-  excess_class q = Tie  ->  q - inject_Z (floor q) == 1#2.
-Proof.
-  case_eq (excess_class q); unfold excess_class;
-  destruct (Qeq_dec (q - inject_Z (floor q)) 0);
-  case_eq (Qcompare (q - inject_Z (floor q)) (1#2));
-  try congruence; intros; now apply Qeq_alt.
-Qed.
-
-
-Lemma tie_ceiling q :
-  excess_class q = Tie  ->  inject_Z (ceiling q) - q == 1#2.
-Proof.
-  case_eq (excess_class q); unfold excess_class;
-  destruct (Qeq_dec (q - inject_Z (floor q)) 0);
-  case_eq (Qcompare (q - inject_Z (floor q)) (1#2));
-  try congruence; intros H _ _; apply Qeq_alt in H;
-  assert (q == (1#2) + inject_Z (floor q)) as H0 by (
-     rewrite <- Qplus_inj_r with (z := -inject_Z (floor q));
-     rewrite H; ring);
-  rewrite H0 at 2; rewrite floor_ceiling_gap.
-  - rewrite inject_Z_plus; ring.
-  - rewrite floor_integer; contradict n; rewrite n; ring.
-Qed.
-
-
-Lemma high_floor q :
-  excess_class q = High -> 1#2 < q - inject_Z (floor q).
-Proof.
-  case_eq (excess_class q); unfold excess_class;
-  destruct (Qeq_dec (q - inject_Z (floor q)) 0);
-  case_eq (Qcompare (q - inject_Z (floor q)) (1#2));
-  try congruence; intros H _ _.
-  now rewrite <- Qgt_alt in H.
-Qed.
-
-
-
-Lemma high_ceiling q :
-  excess_class q = High -> inject_Z (ceiling q) - q < 1#2.
-Proof.
-  case_eq (excess_class q); unfold excess_class;
-  destruct (Qeq_dec (q - inject_Z (floor q)) 0);
-  case_eq (Qcompare (q - inject_Z (floor q)) (1#2));
-  try congruence; intros H _ _.
-  rewrite floor_ceiling_gap.
-  - rewrite <- Qgt_alt in H.
-    rewrite inject_Z_plus.
-    (* Should just be arithmetic. We have
-       1/2 < q - floor q, and we want
-       floor q + 1 - q < 1/2. *)
-    match goal with
-    | [ _ : ?a < ?b |- ?c < ?d ] =>
-      rewrite <- Qplus_lt_l with (z := a - c);
-        match goal with
-        | [ |- ?e < ?f ] =>
-          setoid_replace e with a by ring;
-            setoid_replace f with b by ring
-        end;
-        easy
-    end.
-  - rewrite floor_integer; contradict n; rewrite n; ring.
-Qed.
-
-Lemma complement_nonnegative q :
-  0 <= inject_Z (ceiling q) - q.
-Proof.
-  rewrite <- Qplus_le_r with (z := q); ring_simplify;
-  apply ceiling_spec, Z.le_refl.
-Qed.
-
-Lemma abs_ceiling_diff q :
-  Qabs (q - inject_Z (ceiling q)) == inject_Z (ceiling q) - q.
-Proof.
-  rewrite Qabs_neg.
-  - ring.
-  - rewrite <- Qplus_le_l with (z := inject_Z (ceiling q));
-    ring_simplify; apply ceiling_spec, Z.le_refl.
-Qed.
 
 Lemma abs_floor_diff q :
-  Qabs (q - inject_Z (floor q)) == q - inject_Z (floor q).
+  Qabs (q - inject_Z (floor q)) == excess q.
 Proof.
-  rewrite Qabs_pos; [ easy | apply frac_part_nonnegative ].
+  rewrite Qabs_pos. easy.
+  apply frac_part_nonnegative.
 Qed.
+
+Lemma abs_floor_diff_int q :
+  is_integer q -> Qabs (q - inject_Z (floor q)) == 0.
+Proof.
+  rewrite abs_floor_diff. rewrite floor_integer. unfold excess.
+  intro. rearrange.
+Qed.
+
+
+Lemma abs_ceiling_diff q :
+  ~is_integer q  ->  Qabs (q - inject_Z (ceiling q)) == 1 - excess q.
+Proof.
+  intro; rewrite Qabs_neg, floor_ceiling_gap_Q.
+  - unfold excess; ring.
+  - easy.
+  - assert (q <= inject_Z (ceiling q)) by (apply ceiling_spec, Z.le_refl);
+    rearrange.
+Qed.
+
+Lemma abs_ceiling_diff_int q :
+  is_integer q  ->  Qabs (q - inject_Z (ceiling q)) == 0.
+Proof.
+  rewrite ceiling_integer.
+  intro H.
+  rewrite H.
+  setoid_replace (q - q) with 0 by ring.
+  easy.
+Qed.
+
+
+Definition excess_integer (q : Q) (e : ExcessClass q) :
+  { is_integer q } + { ~ is_integer q}.
+Proof.
+  refine (
+      match e with
+      | Exact _ => left _
+      | Low _ _ => right _
+      | Tie _ => right _
+      | High _ _ => right _
+      end
+    );
+  unfold excess in *;
+  try (apply floor_integer; rearrange);
+  rewrite floor_integer; contradict q0; rewrite q0;
+  now setoid_replace (q - q) with 0 by ring.
+Defined.
+
 
 Lemma round2_closer_than_floor q :
   Qabs (q - inject_Z (round2 q)) <= Qabs (q - inject_Z (floor q)).
 Proof.
-  unfold round2; case_eq (excess_class q); destruct (Z.even (floor q));
-  try rewrite abs_floor_diff; try rewrite abs_ceiling_diff; intro;
-  try (apply Qle_refl);
-  try (now rewrite tie_floor, tie_ceiling);
-  try (apply Qle_trans with (y := 1#2); apply Qlt_le_weak;
-       [ apply high_ceiling | apply high_floor ]; easy).
+  case_eq (excess_integer q (excess_class q)); unfold excess_integer, round2;
+  destruct (excess_class q) as [ | | HEven | ]; try congruence; intros i _.
+  - apply Qle_refl.
+  - apply Qle_refl.
+  - destruct (Z.even (floor q)).
+    + apply Qle_refl.
+    + now rewrite abs_floor_diff, abs_ceiling_diff, HEven.
+  - rewrite abs_floor_diff, abs_ceiling_diff with (1 := i);
+    apply Qlt_le_weak, Qlt_trans with (y := 1#2); rearrange.
 Qed.
 
 Lemma round2_closer_than_ceiling q :
   Qabs (q - inject_Z (round2 q)) <= Qabs (q - inject_Z (ceiling q)).
 Proof.
-  unfold round2; case_eq (excess_class q); destruct (Z.even (floor q));
-  try rewrite abs_floor_diff; try rewrite abs_ceiling_diff; intro;
-  try (apply Qle_refl);
-  try (now rewrite tie_floor, tie_ceiling);
-  try (now rewrite exact_floor, exact_ceiling);
-  try (apply Qle_trans with (y := 1#2); apply Qlt_le_weak;
-       [ apply low_floor | apply low_ceiling ]; easy).
+  case_eq (excess_integer q (excess_class q)); unfold excess_integer, round2;
+  destruct (excess_class q) as [ | | HEven | ]; try congruence; intros i _.
+  - now rewrite abs_floor_diff_int with (1 := i),
+                                        abs_ceiling_diff_int with (1 := i).
+  - rewrite abs_floor_diff, abs_ceiling_diff with (1 := i);
+    apply Qlt_le_weak, Qlt_trans with (y := 1#2); rearrange.
+  - destruct (Z.even (floor q)).
+    + now rewrite abs_floor_diff, abs_ceiling_diff, HEven.
+    + apply Qle_refl.
+  - apply Qle_refl.
 Qed.
