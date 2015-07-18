@@ -4,6 +4,7 @@
 Require Import QArith.
 Require Import Qabs.
 
+Require Import rearrange_tactic.
 Require Import qpos.
 Require Import floor_and_ceiling.
 Require Import twopower.
@@ -12,6 +13,12 @@ Require Import binary_float.
 Open Scope Q.
 
 (* Some remedial lemmas. *)
+
+Lemma Qneg_le : forall a b, -a < b -> -b < a.
+Proof.
+  rearrange.
+Qed.
+
 
 Lemma Qle_shift_mul_r a b c : 0 < b -> a / b <= c -> a <= c * b.
 Proof.
@@ -796,7 +803,7 @@ Proof.
   apply Z.sub_le_mono.
   assert (0 <= 'q)%Z.
   auto with zarith.
-  replace ('r) with (0 + 'r)%Z at 1.
+  replace ('r)%Z with (0 + 'r)%Z at 1.
   apply Zplus_le_compat_r.
   assumption.
   auto with zarith.
@@ -1189,4 +1196,3 @@ End SeparationTheorems.
    for the round-to-nearest rounding modes. *)
 
 
-   

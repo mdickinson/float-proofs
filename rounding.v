@@ -11,6 +11,7 @@ Require Import Qabs.
 
 Require Import remedial.
 Require Import floor_and_ceiling.
+Require Import round.
 Require Import twopower.
 Require Import binary_float.
 
@@ -414,3 +415,4 @@ Qed.
                     <= x - f == | f - x |.
 
    The case x <= f is analogous. *)
+

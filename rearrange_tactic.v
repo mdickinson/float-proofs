@@ -54,6 +54,13 @@ Ltac rearrange_lt :=
 
 Ltac rearrange := intros; (rearrange_eq || rearrange_lt || rearrange_le).
 
+(* Tactic to replace the goal with an equivalent one by rearrangement. *)
+
+Ltac rearrange_goal new_goal :=
+  let H := fresh "H" in
+    assert new_goal as H; [ | rearrange ].
+
+
 
 (* Testing the tactic. *)
 

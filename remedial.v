@@ -3,7 +3,7 @@
 
 Require Import Qabs.
 
-Open Scope Q.
+Local Open Scope Q.
 
 Notation "x <> y" := (~ (x == y)) : Q_scope.
 Notation "x <= y < z" := (x <= y /\ y < z) : Q_scope.
@@ -91,3 +91,10 @@ Proof.
     + contradict H; now apply Qabs_zero.
   - rewrite <- Qabs_Qmult; setoid_replace (a / b * b) with a by field; easy.
 Qed.
+
+Definition Qle_dec x y : { x <= y } + {~ (x <= y) }.
+Proof.
+  destruct (Qlt_le_dec y x).
+  - right; now apply Qlt_not_le.
+  - now left.
+Defined.

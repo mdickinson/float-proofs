@@ -1,4 +1,4 @@
-MODULES := rearrange_tactic remedial floor_and_ceiling qpos twopower binary_float rounding
+MODULES := rearrange_tactic remedial floor_and_ceiling round qpos twopower binary_float rounding in_progress
 VS := $(MODULES:%=%.v)
 
 .PHONY: coq clean
