@@ -141,6 +141,13 @@ Definition float_from_significand_and_exponent p m e
 (* An obvious fact: a rational number x is representable iff its
    the image of a binary float. *)
 
+Lemma float_from_significand_and_exponent_Q p m e m_bounded :
+  proj1_sig (float_from_significand_and_exponent p m e m_bounded) ==
+  inject_Z m * twopowerQ e.
+Proof.
+  easy.
+Qed.
+
 Lemma binary_floats_are_representable p x :
   representable p x  <->  exists (y : binary_float p), proj1_sig y == x.
 Proof.

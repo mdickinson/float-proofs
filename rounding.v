@@ -10,6 +10,7 @@
 Require Import Qabs.
 
 Require Import remedial.
+Require Import rearrange_tactic.
 Require Import floor_and_ceiling.
 Require Import round.
 Require Import twopower.
@@ -55,15 +56,18 @@ Ltac twopower_collect :=
       | [ |- _ <= twopowerQ _ / twopowerQ _ ] => rewrite <- twopowerQ_div
       | [ |- twopowerQ _ * twopowerQ _ <= _ ] => rewrite <- twopowerQ_mul
       | [ |- _ / twopowerQ _ * twopowerQ _ <= _ ] =>
-        unfold Qdiv;
-          rewrite <- twopowerQ_inv;
-          rewrite <- Qmult_assoc;
-          rewrite <- twopowerQ_mul
+        unfold Qdiv; rewrite <- twopowerQ_inv;
+        rewrite <- Qmult_assoc; rewrite <- twopowerQ_mul
+      | [ |- _ <= _ * twopowerQ _ / twopowerQ _] =>
+        unfold Qdiv; rewrite <- twopowerQ_inv;
+        rewrite <- Qmult_assoc; rewrite <- twopowerQ_mul
       end.
 
 Ltac twopower_cleanup :=
   try match goal with
       | [ |- _ * twopowerQ 0 <= _ ] => replace (twopowerQ 0) with 1 by easy;
+          rewrite Qmult_1_r
+      | [ |- _ <= _ * twopowerQ 0 ] => replace (twopowerQ 0) with 1 by easy;
           rewrite Qmult_1_r
       | [ |- 0 * twopowerQ _ <= _ ] => rewrite Qmult_0_l
       | [ |- _ <= 0 * twopowerQ _ ] => rewrite Qmult_0_l
@@ -416,3 +420,81 @@ Qed.
 
    The case x <= f is analogous. *)
 
+Lemma f_twopower_diff x n f :
+  x - inject_Z (f(x / twopowerQ n)) * twopowerQ n ==
+((x / twopowerQ n) - inject_Z (f(x / twopowerQ n))) * twopowerQ n.
+Proof.
+  field; apply twopowerQ_nonzero.
+Qed.
+
+
+Lemma round_ties_to_even_closer_than_round_toward_negative p x :
+  Qabs (x - proj1_sig (round_ties_to_even p x)) <=
+  Qabs (x - proj1_sig (round_toward_negative p x)).
+Proof.
+  unfold round_ties_to_even, round_toward_negative;
+  destruct (Qeq_dec x 0) as [x_zero | x_nonzero].
+  - (* Case x == 0. *)
+    now rewrite x_zero.
+  - (* Case x != 0. *)
+    rewrite ?float_from_significand_and_exponent_Q.
+    rewrite ?f_twopower_diff.
+    rewrite ?Qabs_Qmult.
+    rewrite ?Qabs_twopowerQ.
+    generalize (x / twopowerQ (binadeQ x x_nonzero - ' p + 1)); intro q.
+    twopower_right.
+    apply round_as_close_as_floor.
+Qed.
+
+
+Lemma round_ties_to_even_closer_than_round_toward_positive p x :
+  Qabs (x - proj1_sig (round_ties_to_even p x)) <=
+  Qabs (x - proj1_sig (round_toward_positive p x)).
+Proof.
+  unfold round_ties_to_even, round_toward_positive;
+  destruct (Qeq_dec x 0) as [x_zero | x_nonzero].
+  - (* Case x == 0. *)
+    now rewrite x_zero.
+  - (* Case x != 0. *)
+    rewrite ?float_from_significand_and_exponent_Q.
+    rewrite ?f_twopower_diff.
+    rewrite ?Qabs_Qmult.
+    rewrite ?Qabs_twopowerQ.
+    generalize (x / twopowerQ (binadeQ x x_nonzero - 'p + 1)); intro q.
+    twopower_right.
+    apply round_as_close_as_ceiling.
+Qed.
+
+Lemma round_ties_to_even_nearest p x (f : binary_float p) :
+  Qabs (x - proj1_sig (round_ties_to_even p x)) <= Qabs (x - proj1_sig f).
+Proof.
+  destruct (Qle_ge_cases (proj1_sig f) x).
+  - (* Case f <= x. *)
+    apply Qle_trans with (y := Qabs (x - proj1_sig (round_toward_negative p x))).
+    + (* | x - round x | <= | x - round_down x | *)
+      apply round_ties_to_even_closer_than_round_toward_negative.
+    + (* | x - round_down x | <= | x - f | *)
+      rewrite ?Qabs_pos.
+      rearrange_goal (proj1_sig f <= proj1_sig (round_toward_negative p x)).
+      assert (f <= round_toward_negative p x)%float.
+      now apply (round_toward_negative_spec p x f).
+      assumption.
+      rearrange.
+      rearrange_goal (proj1_sig (round_toward_negative p x) <= x).
+      apply round_toward_negative_spec.
+      apply Qle_refl.
+  - (* Case x <= f *)
+    apply Qle_trans with (y := Qabs (x - proj1_sig (round_toward_positive p x))).
+    + (* |x - round x | <= |x - round_up x | *)
+      apply round_ties_to_even_closer_than_round_toward_positive.
+    + (* |x - round_up x | <= |x - f| *)
+      rewrite ?Qabs_neg.
+      assert (round_toward_positive p x <= f)%float.
+      now apply (round_toward_positive_spec p x f).
+      unfold float_le in H0.
+      rearrange.
+      rearrange.
+      rearrange_goal (x <= proj1_sig (round_toward_positive p x)).
+      apply round_toward_positive_spec.
+      apply Qle_refl.
+Qed.
