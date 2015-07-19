@@ -9,60 +9,6 @@ Require Import Qabs.
 Require Import remedial.
 Require Import rearrange_tactic.
 
-(* Helper lemmas that we'll need later in the module. *)
-
-Lemma negate_iff : forall P Q, (P <-> Q)  ->  (~P <-> ~Q).
-Proof.
-  tauto.
-Qed.
-
-Local Open Scope Z.
-
-Lemma Zle_sign_flip_l (a b : Z) : -a <= b -> -b <= a.
-Proof.
-  intro; apply Zplus_le_reg_r with (p := b - a); now ring_simplify.
-Qed.
-
-Lemma Zle_not_eq (a b : Z) : a <= b -> ~(a = b) -> a < b.
-Proof.
-  auto with zarith.
-Qed.
-
-Local Open Scope Q.
-
-Notation "x <= y < z" := (x <= y /\ y < z) : Q_scope.
-
-Lemma Qopp_le_mono (x y : Q) : x <= y  <->  -y <= -x.
-Proof.
-  intros; unfold Qopp; unfold Qle; simpl;
-  split; intro; apply Z.opp_le_mono; now ring_simplify.
-Qed.
-
-Lemma Qopp_lt_mono (x y : Q) : x < y  <->  -y < -x.
-Proof.
-  intros; unfold Qopp; unfold Qlt; simpl;
-  split; intro; apply Z.opp_lt_mono; now ring_simplify.
-Qed.
-
-Lemma Qlt_nge (x y : Q) : x < y <-> ~(y <= x).
-  split; auto with qarith.
-Qed.
-
-Lemma Qle_not_eq (a b : Q) : a <= b -> ~(a == b) -> a < b.
-Proof.
-  auto with qarith.
-Qed.
-
-Lemma Qeq_le_incl (a b : Q) : a == b -> a <= b.
-Proof.
-  intro H; rewrite H; apply Qle_refl.
-Qed.
-
-Lemma Qabs_Zabs (x : Z) : Qabs (inject_Z x) == inject_Z (Z.abs x).
-Proof.
-  now unfold Qabs.
-Qed.
-
 (* The floor function can be defined in terms of the standard library
    / operator, which does Euclidean division. *)
 
