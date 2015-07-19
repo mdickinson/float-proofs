@@ -9,7 +9,7 @@ Require Import qpos.
 Require Import twopower.
 
 
-Open Scope Q.
+Local Open Scope Q.
 
 (* Remedial lemmas.  Move these to another module. *)
 
@@ -185,7 +185,7 @@ Notation "0" := (zero_float _) : float_scope.
 Notation "- x" := (float_opp x) : float_scope.
 Notation "x <> y" := (~ (float_eq x y)) : float_scope.
 
-Open Scope float.
+Local Open Scope float.
 
 Lemma float_eq_reflexivity p (x : binary_float p) : x == x.
 Proof.
