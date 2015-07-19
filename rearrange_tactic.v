@@ -2,9 +2,6 @@ Require Import QArith.
 
 Local Open Scope Q.
 
-
-SearchAbout (/_).
-
 Lemma Qinv_nonzero q : ~(q == 0) -> ~(/q == 0).
 Proof.
   intro H; contradict H; rewrite <- Qinv_involutive; now rewrite H.
