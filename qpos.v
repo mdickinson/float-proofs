@@ -6,7 +6,7 @@ Require Import QOrderedType.
 (* Auxiliary facts about Q that don't seem to be readily to
    hand in the standard library. *)
 
-Open Scope Q.
+Local Open Scope Q.
 
 Lemma Q_mul_pos_pos : forall p q : Q, 0 < p -> 0 < q -> 0 < p * q.
 Proof.
@@ -18,7 +18,7 @@ Definition QPos := { x : Q | 0 < x }.
 
 Delimit Scope QPos_scope with QPos.
 
-Open Scope QPos.
+Local Open Scope QPos.
 
 Module Type OrderedTypeFullWithOrderFunctions :=
   OrderedTypeFull <+ HasBoolOrdFuns <+ BoolOrdSpecs.
