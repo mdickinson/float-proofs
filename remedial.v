@@ -27,6 +27,7 @@ Notation "x <> y" := (~ (x == y)) : Q_scope.
 Notation "x <= y < z" := (x <= y /\ y < z) : Q_scope.
 Notation "x < y <= z" := (x < y /\ y <= z) : Q_scope.
 Notation "x < y < z" := (x < y /\ y < z) : Q_scope.
+Notation "2" := (2#1) : Q_scope.
 
 Lemma Qopp_le_mono (x y : Q) : x <= y  <->  -y <= -x.
 Proof.
