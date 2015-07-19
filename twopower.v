@@ -425,9 +425,16 @@ Proof.
   apply Qabs_pos, Qlt_le_weak, twopowerQ_positive.
 Qed.
 
-Lemma twopowerQ_monotonic_lt m n : (m < n)%Z -> twopowerQ m < twopowerQ n.
+Lemma twopowerQ_monotonic_lt m n :
+  (m < n)%Z -> twopowerQ m < twopowerQ n.
 Proof.
   apply twopower_monotonic_lt.
+Qed.
+
+Lemma twopowerQ_monotonic_le m n :
+  (m <= n)%Z -> twopowerQ m <= twopowerQ n.
+Proof.
+  apply twopower_monotonic_le.
 Qed.
 
 Lemma twopowerQ_injective_lt (p q : Z) :
