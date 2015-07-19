@@ -12,16 +12,24 @@ Ltac twopower_l_to_r :=
   match goal with
   | [ |- _ * twopowerQ _ == _ ] => apply Qmult_eq_div
                                    with (1 := twopowerQ_nonzero _)
+  | [ |- _ / twopowerQ _ == _ ] => apply Qdiv_eq_mult
+                                   with (1 := twopowerQ_nonzero _)
   | [ |- _ * twopowerQ _ <= _ ] => apply Qmult_le_div
+                                   with (1 := twopowerQ_positive _)
+  | [ |- _ / twopowerQ _ <= _ ] => apply Qdiv_le_mult
                                    with (1 := twopowerQ_positive _)
   | [ |- _ * twopowerQ _ < _ ] => apply Qmult_lt_div
                                    with (1 := twopowerQ_positive _)
-  | [ |- _ / twopowerQ _ <= _ ] => apply Qdiv_le_mult
+  | [ |- _ / twopowerQ _ < _ ] => apply Qdiv_lt_mult
                                    with (1 := twopowerQ_positive _)
   end.
 
 Ltac twopower_r_to_l :=
   match goal with
+  | [ |- _ == _ / twopowerQ _ ] => apply Qmult_eq_div
+                                   with (1 := twopowerQ_nonzero _)
+  | [ |- _ == _ * twopowerQ _ ] => apply Qdiv_eq_mult
+                                   with (1 := twopowerQ_nonzero _)
   | [ |- _ <= _ / twopowerQ _ ] => apply Qmult_le_div
                                    with (1 := twopowerQ_positive _)
   | [ |- _ <= _ * twopowerQ _ ] => apply Qdiv_le_mult
@@ -38,7 +46,12 @@ Ltac twopower_prepare :=
           by (field; apply twopowerQ_nonzero)
       | [ |- - (?n * twopowerQ ?e) <= _ ] =>
         setoid_replace (- (n * twopowerQ e)) with ((-n) * twopowerQ e) by ring
+
       | [ |- Qabs (_ / twopowerQ _) <= _ ] =>
+        rewrite Qabs_div, Qabs_twopowerQ; [ | apply twopowerQ_nonzero ]
+      | [ |- Qabs (_ / twopowerQ _) < _ ] =>
+        rewrite Qabs_div, Qabs_twopowerQ; [ | apply twopowerQ_nonzero ]
+      | [ |- _ <= Qabs(_ / twopowerQ _) ] =>
         rewrite Qabs_div, Qabs_twopowerQ; [ | apply twopowerQ_nonzero ]
       | [ |- Qabs (_ * twopowerQ _) < _ ] =>
         rewrite Qabs_Qmult, Qabs_twopowerQ
