@@ -2,6 +2,25 @@ Require Import QArith.
 
 Local Open Scope Q.
 
+Ltac discharge_positivity_constraints :=
+  match goal with
+  | [ _ : 0 < ?z |- ~(?z == 0) ] => apply Qnot_eq_sym, Qlt_not_eq; assumption
+  | [ _ : 0 < ?z |- 0 < / ?z ] => apply Qinv_lt_0_compat; assumption
+  | [ _ : 0 < ?z |- 0 < ?z ] => assumption
+  end.
+
+Ltac field_pos := field; discharge_positivity_constraints.
+
+
+Ltac scale_by multiplier :=
+  match goal with
+  | [ |- _ <= _ ] => apply Qmult_le_r with (z := multiplier);
+      [discharge_positivity_constraints | ]
+  | [ |- _ < _ ] => apply Qmult_lt_r with (z := multiplier);
+      [discharge_positivity_constraints | ]
+  end.
+
+
 Lemma _rearrange_eq_l a b c d :
   a == b  ->  b + c == a + d  ->  c == d.
 Proof.
@@ -17,10 +36,10 @@ Qed.
 Ltac rearrange_eq :=
   match goal with
   | [ H : _ == _ |- _ == _ ] =>
-      (apply _rearrange_eq_r with (1 := H); ring)
+      (apply _rearrange_eq_r with (1 := H); (ring || field_pos))
       ||
-      (apply _rearrange_eq_l with (1 := H); ring)
-  | [ |- _ == _ ] => ring
+      (apply _rearrange_eq_l with (1 := H); (ring || field_pos))
+  | [ |- _ == _ ] => (ring || field_pos)
   end.
 
 Lemma _rearrange_le a b c d :
@@ -40,16 +59,18 @@ Proof.
   setoid_replace (a - c + c) with a by (idtac; rearrange_eq).
   assumption.
 Qed.
-  
+
 
 Ltac rearrange_le :=
   match goal with
-  | [ H : _ <= _ |- _ <= _ ] => apply _rearrange_le with (1 := H); ring
+  | [ H : _ <= _ |- _ <= _ ] => apply _rearrange_le with (1 := H);
+      (ring || field_pos)
   end.
 
 Ltac rearrange_lt :=
   match goal with
-  | [ H : _ < _ |- _ < _ ] => apply _rearrange_lt with (1 := H); ring
+  | [ H : _ < _ |- _ < _ ] => apply _rearrange_lt with (1 := H);
+      (ring || field_pos)
   end.
 
 Ltac rearrange := intros; (rearrange_eq || rearrange_lt || rearrange_le).
@@ -59,8 +80,6 @@ Ltac rearrange := intros; (rearrange_eq || rearrange_lt || rearrange_le).
 Ltac rearrange_goal new_goal :=
   let H := fresh "H" in
     assert new_goal as H; [ | rearrange ].
-
-
 
 (* Testing the tactic. *)
 
