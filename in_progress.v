@@ -5,6 +5,7 @@ Require Import QArith.
 Require Import Qabs.
 
 Require Import rearrange_tactic.
+Require Import remedial.
 Require Import qpos.
 Require Import floor_and_ceiling.
 Require Import twopower.
@@ -1189,10 +1190,3 @@ Qed.
 End SecondSeparationTheorem.
 
 End SeparationTheorems.
-
-(* Next step: we need to show that for the rounding modes of interest,
-   the only discontinuities of those rounding modes are elements of
-   binary_float p for the directed rounding modes, and binary_float p+1
-   for the round-to-nearest rounding modes. *)
-
-
