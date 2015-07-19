@@ -14,79 +14,10 @@ Require Import rearrange_tactic.
 Require Import floor_and_ceiling.
 Require Import round.
 Require Import twopower.
+Require Import twopower_tactics.
 Require Import binary_float.
 
 Local Open Scope Q.
-
-(* Some tactics for dealing with powers of 2. *)
-
-(* To prove representability, we need to know that the significand is bounded. *)
-
-Ltac twopower_l_to_r :=
-  match goal with
-  | [ |- _ / twopowerQ _ <= _ ] => apply Qdiv_le_mult with (1 := twopowerQ_positive _)
-  | [ |- _ * twopowerQ _ <= _ ] => apply Qmult_le_div with (1 := twopowerQ_positive _)
-  end.
-
-Ltac twopower_r_to_l :=
-  match goal with
-  | [ |- _ <= _ / twopowerQ _ ] => apply Qmult_le_div with (1 := twopowerQ_positive _)
-  | [ |- _ <= _ * twopowerQ _ ] => apply Qdiv_le_mult with (1 := twopowerQ_positive _)
-  end.
-
-Ltac twopower_prepare :=
-  try match goal with
-      | [ |- - (?n / twopowerQ ?e) <= _ ] =>
-        setoid_replace (- (n / twopowerQ e)) with ((-n) / twopowerQ e)
-          by (field; apply twopowerQ_nonzero)
-      | [ |- _ <= - (?n / twopowerQ ?e)] =>
-        setoid_replace (- (n / twopowerQ e)) with ((-n) / twopowerQ e)
-          by (field; apply twopowerQ_nonzero)
-      | [ |- - (?n * twopowerQ ?e) <= _ ] =>
-        setoid_replace (- (n * twopowerQ e)) with ((-n) * twopowerQ e) by ring
-      | [ |- Qabs (_ / twopowerQ ?e) <= _ ] =>
-        rewrite Qabs_div, Qabs_twopowerQ; [ | apply twopowerQ_nonzero ]
-      end.
-
-(* Tactics to be applied post moving powers of two around. *)
-
-Ltac twopower_collect :=
-  try match goal with
-      | [ |- _ <= twopowerQ _ * twopowerQ _ ] => rewrite <- twopowerQ_mul
-      | [ |- _ <= twopowerQ _ / twopowerQ _ ] => rewrite <- twopowerQ_div
-      | [ |- twopowerQ _ * twopowerQ _ <= _ ] => rewrite <- twopowerQ_mul
-      | [ |- _ / twopowerQ _ * twopowerQ _ <= _ ] =>
-        unfold Qdiv; rewrite <- twopowerQ_inv;
-        rewrite <- Qmult_assoc; rewrite <- twopowerQ_mul
-      | [ |- _ <= _ * twopowerQ _ / twopowerQ _] =>
-        unfold Qdiv; rewrite <- twopowerQ_inv;
-        rewrite <- Qmult_assoc; rewrite <- twopowerQ_mul
-      end.
-
-Ltac twopower_cleanup :=
-  try match goal with
-      | [ |- _ * twopowerQ 0 <= _ ] => replace (twopowerQ 0) with 1 by easy;
-          rewrite Qmult_1_r
-      | [ |- _ <= _ * twopowerQ 0 ] => replace (twopowerQ 0) with 1 by easy;
-          rewrite Qmult_1_r
-      | [ |- 0 * twopowerQ _ <= _ ] => rewrite Qmult_0_l
-      | [ |- _ <= 0 * twopowerQ _ ] => rewrite Qmult_0_l
-      end.
-
-
-Ltac twopower_exponent_simplify :=
-  try match goal with
-      | [ |- _ <= twopowerQ ?e ] => ring_simplify e
-      | [ |- twopowerQ ?e <= _ ] => ring_simplify e
-      | [ |- _ <= _ * twopowerQ ?e ] => ring_simplify e
-      | [ |- _ * twopowerQ ?e <= _ ] => ring_simplify e
-      end.
-
-Ltac twopower_left := twopower_prepare; twopower_r_to_l; twopower_collect;
-                      twopower_exponent_simplify; twopower_cleanup.
-Ltac twopower_right := twopower_prepare; twopower_l_to_r; twopower_collect;
-                      twopower_exponent_simplify; twopower_cleanup.
-
 
 (* There are two cases: x is zero, or x is nonzero. Let's first assume that x
    is nonzero. Then we can construct the significand and exponent directly. *)
@@ -498,3 +429,31 @@ Proof.
       apply round_toward_positive_spec.
       apply Qle_refl.
 Qed.
+
+(* Claim: if round(x) < round(y) then there's a z representable in
+   precision p + 1 such that x <= z <= y.
+
+   Sketch of proof:
+
+   First, we define next_up and next_down.
+
+   Then we show that
+
+   x <= (round(x) + next_up(round(x)) / 2
+     <= round(y) + next_down(round(y)) / 2
+     <= y.
+
+   where the middle inequality holds because round(x) <= next_down(round(y))
+   and next_up(round(x)) <= round(y).
+
+   And those follow from:  f < g  <->  next_up(f) <= g,
+                           f < g  <->  f <= next_down(g)
+   for nonzero floats f and g.
+
+   Note that next_up and next_down are only well-defined for nonzero
+   floats.
+
+   Finally we'll need to show that for a nonzero float f representable
+   in precision p, (f + next_up(f)) / 2 is representable in precision
+   p + 1, and similarly for next_down.
+*)
