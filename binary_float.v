@@ -4,22 +4,13 @@
 Require Import QArith.
 Require Import Qabs.
 
+Require Import remedial.
 Require Import floor_and_ceiling.
 Require Import qpos.
 Require Import twopower.
 
 
 Local Open Scope Q.
-
-(* Remedial lemmas.  Move these to another module. *)
-
-Lemma Qle_lt_eq x y :
-  x <= y -> x < y \/ x == y.
-Proof.
-  case (Qeq_dec x y).
-  - intros; now right.
-  - intros; left; now apply Qle_not_eq.
-Qed.
 
 (* A rational number is representable in precision p if it can be expressed in
    the form m * 2^e for some integers m and e with |m| < 2^p. *)
