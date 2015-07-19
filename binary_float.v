@@ -209,6 +209,24 @@ Proof.
 Qed.
 
 
+Add Parametric Morphism (p : positive) : (proj1_sig (A:=Q) (P:=representable p)) with
+    signature (@float_eq p) ==> Qeq as inclusion_morphism.
+Proof.
+  intros x y.
+  unfold float_eq.
+  easy.
+Qed.
+
+Add Parametric Morphism (p : positive) : (@float_le p)
+    with signature (@float_eq p) ==> (@float_eq p) ==> iff as float_le_morphism.
+Proof.
+  unfold float_eq, float_le.
+  intros.
+  rewrite H.
+  rewrite H0.
+  easy.
+Qed.
+
 Lemma float_le_antisymm p (x y : binary_float p) :
   x <= y  ->  y <= x  ->  x == y.
 Proof.

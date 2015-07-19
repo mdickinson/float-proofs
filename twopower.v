@@ -50,12 +50,6 @@ Qed.
 
 Local Open Scope Q.
 
-Lemma nonzero_and_nonneg_implies_positive: forall q : Q,
-   ~ q == 0  ->  q >= 0  ->  q > 0.
-Proof.
-  auto with qarith.
-Qed.
-
 Lemma two_to_the_power_n_is_nonzero : forall n: Z, (~ (inject_Z 2)^n == 0)%Q.
 Proof.
   intro n; destruct n; simpl; try (rewrite <- Qinv_power_positive);
@@ -64,10 +58,8 @@ Qed.
 
 Lemma two_to_the_power_n_is_positive : forall n : Z, (0 < inject_Z 2 ^ n)%Q.
 Proof.
-  intros.
-  apply nonzero_and_nonneg_implies_positive.
-  apply two_to_the_power_n_is_nonzero.
-  now apply Qpower_pos.
+  intros; apply Qle_not_eq;
+  [ now apply Qpower_pos | apply Qnot_eq_sym, two_to_the_power_n_is_nonzero].
 Qed.
 
 Lemma Qmul_gt1_gt1 : forall (q r : Q), 1 < q -> 1 < r -> 1 < q * r.
@@ -475,7 +467,7 @@ Qed.
 (* We define binadeQ for all nonzero numbers. *)
 
 Definition binadeQ x (x_nonzero : ~(x == 0)) : Z :=
-  binade (exist _ (Qabs x) (abs_nonzero x x_nonzero)).
+  binade (exist _ (Qabs x) (Qabs_nonzero x x_nonzero)).
 
 (* Relationships between twopower and binade. *)
 

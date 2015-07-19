@@ -73,18 +73,6 @@ Proof.
   rearrange.
 Qed.
 
-Lemma abs_nonzero (x : Q) : ~(x == 0)  -> 0 < Qabs x.
-Proof.
-  destruct (Q_dec x 0) as [[Hlt | Hgt] | Heq].
-  - intros _. (* case x < 0 *)
-    setoid_replace (Qabs x) with (-x) by (now apply Qabs_neg, Qlt_le_weak);
-    now apply lt_neg_switch.
-  - intros _. (* case 0 < x *)
-    setoid_replace (Qabs x) with x by (now apply Qabs_pos, Qlt_le_weak);
-    easy.
-  - intuition. (* case x == 0 *)
-Qed.
-
 Lemma Qle_Qabs_neg x : -x <= Qabs x.
 Proof.
   rewrite <- Qabs_opp; apply Qle_Qabs.
@@ -130,6 +118,13 @@ Proof.
   apply Qabs_case; intros _ H; [ | rewrite <- Qopp_opp]; rewrite H; easy.
 Qed.
 
+Lemma Qabs_nonzero (x : Q) : ~(x == 0)  -> 0 < Qabs x.
+Proof.
+  intro H; apply Qle_not_eq.
+  - apply Qabs_nonneg.
+  - contradict H. apply Qabs_zero. now symmetry.
+Qed.
+
 Lemma Qabs_div (a b : Q) :
   (~ b == 0) -> Qabs (a / b) == Qabs a / Qabs b.
 Proof.
@@ -153,4 +148,9 @@ Proof.
   case (Qeq_dec x y).
   - intros; now right.
   - intros; left; now apply Qle_not_eq.
+Qed.
+
+Lemma Qabs_nonzero_inv (x : Q) : 0 < Qabs x -> ~(x == 0).
+Proof.
+  apply Qabs_case; intros _ H1; intro H; now rewrite H in H1.
 Qed.

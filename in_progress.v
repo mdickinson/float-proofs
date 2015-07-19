@@ -1,5 +1,5 @@
-(* Define subsets of the rationals representable as binary floats
-   with various precisions. *)
+(* Define subsets of the rationals representable as binary floats with various
+   precisions. *)
 
 Require Import QArith.
 Require Import Qabs.
@@ -9,6 +9,7 @@ Require Import remedial.
 Require Import qpos.
 Require Import floor_and_ceiling.
 Require Import twopower.
+Require Import twopower_tactics.
 Require Import binary_float.
 
 Open Scope Q.
@@ -70,32 +71,7 @@ Proof.
   easy.
 Qed.
 
-(* Want that a < b + c  <->  a - b < c. *)
-Definition nonzero (x : Q) := ~(0 == x).
-
-Lemma nonzero_div (x y : Q) : nonzero x -> nonzero y -> nonzero (x / y).
-Proof.
-  intros.
-  intro.
-  apply H.
-  setoid_replace x with (x / y * y).
-  setoid_rewrite <- H1.
-  field.
-  field.
-  intro.
-  apply H0.
-  easy.
-Qed.
-
-
-Lemma nonzero_qpos (q : QPos) : nonzero (proj1_sig q).
-Proof.
-  destruct q; simpl.
-  intro. rewrite <- H in q.
-  revert q.
-  compute. easy.
-Qed.
-
+(* XXX Delete me. *)
 
 Lemma Qdiv_mul (a b c : Q) :
   (~ 0 == b) ->  (a / b == c  <->  a == c * b).
@@ -113,28 +89,6 @@ Proof.
   rewrite Qdiv_mult_l.
   easy.
   now contradict H.
-Qed.
-
-Lemma Qabs_zero (x : Q) : 0 == Qabs x  ->  0 == x.
-Proof.
-  apply Qabs_case.
-    easy.
-    intros; setoid_replace x with (- - x) by (now rewrite Qopp_opp);
-    now rewrite <- H0.
-Qed.
-
-Lemma Qabs_div (a b : Q) :
-  (~ 0 == b) -> Qabs (a / b) == Qabs a / Qabs b.
-Proof.
-  intro.
-  setoid_replace (Qabs a) with (Qabs (a / b) * Qabs b).
-
-  rewrite Qdiv_mult_l.
-  easy.
-  contradict H; now apply Qabs_zero.
-
-  rewrite <- Qabs_Qmult; rewrite Qmult_comm; rewrite Qmult_div_r;
-    auto with qarith.
 Qed.
 
 Lemma Qdiv_lt_le (a b c d : Q) :
@@ -320,23 +274,6 @@ Proof.
   apply Qopp_opp.
 Qed.
 
-Lemma abs_nonzero (x : Q) : ~(0 == x)  -> 0 < Qabs x.
-Proof.
-  intro; apply nonzero_and_nonneg_implies_positive;
-  [ contradict H; now apply Qabs_zero | apply Qabs_nonneg ].
-Qed.
-
-Lemma abs_nonzero_inv (x : Q) : 0 < Qabs x -> nonzero x.
-Proof.
-  apply Qabs_case; intros; intro; now rewrite <- H1 in H0.
-Qed.
-
-
-Definition binadeQ (x : Q) (x_nonzero : ~(0 == x)) : Z.
-  refine (binade (exist _ (Qabs x) _)).
-  now apply abs_nonzero.
-Defined.
-
 (*
    ulp of a nonzero float x at precision p is 2**(binade x - p + 1).
 
@@ -346,22 +283,7 @@ Defined.
    so e = binade(x) - p + 1.
 *)
 
-
-(* Analog of the binade-twopower adjunction results. *)
-
-Lemma twopowerQ_binadeQ_le (n : Z) (q : Q) (q_nonzero : nonzero q) :
-  twopowerQ n <= Qabs q  <->  (n <= binadeQ q q_nonzero)%Z.
-Proof.
-  unfold twopowerQ, binadeQ; now rewrite <- twopower_binade_le.
-Qed.
-
-Lemma twopowerQ_binadeQ_lt (n : Z) (q : Q) (q_nonzero: nonzero q) :
-  (binadeQ q q_nonzero < n)%Z  <->  Qabs q < twopowerQ n.
-Proof.
-  unfold twopowerQ, binadeQ; now rewrite <- twopower_binade_lt.
-Qed.
-
-Definition ulp p (x : binary_float p) (x_nonzero : ~(0 == proj1_sig x)) : Q :=
+Definition ulp p (x : binary_float p) (x_nonzero : ~(proj1_sig x == 0)) : Q :=
   twopowerQ (binadeQ (proj1_sig x) x_nonzero - 'p + 1).
 
 Definition is_multiple_of (y x : Q) :=
@@ -527,13 +449,13 @@ Qed.
 
 
 Lemma binadeQ_for_twopower_multiple (e : Z) (x : Q)
-  (x_nonzero : nonzero x) (y : Q) (y_nonzero: nonzero y) :
+  (x_nonzero : ~(x == 0)) (y : Q) (y_nonzero: ~(y == 0)) :
   y == twopowerQ e * x  ->  (binadeQ y y_nonzero = e + binadeQ x x_nonzero)%Z.
 Proof.
   intro H.
   unfold binadeQ.
-  set (xpos := exist _ (Qabs x) (abs_nonzero x x_nonzero)).
-  set (ypos := exist _ (Qabs y) (abs_nonzero y y_nonzero)).
+  set (xpos := exist _ (Qabs x) (Qabs_nonzero x x_nonzero)).
+  set (ypos := exist _ (Qabs y) (Qabs_nonzero y y_nonzero)).
 
   assert (Qabs y == twopowerQ e * Qabs x).
   assert (twopowerQ e == Qabs (twopowerQ e)).
@@ -558,7 +480,7 @@ Qed.
 
 
 Lemma is_multiple_of_ulp p (x : binary_float p)
-  (x_nonzero : ~(0 == proj1_sig x)) :
+  (x_nonzero : ~(proj1_sig x == 0)) :
     is_multiple_of (ulp _ x x_nonzero) (proj1_sig x).
 Proof.
   unfold ulp.
@@ -581,10 +503,9 @@ Proof.
         binade(m) <= p - 1.
   *)
 
-  assert(m_nonzero : nonzero (inject_Z m)).
-  unfold nonzero.
-  intro.
-  rewrite <- H in x_is_m_2e.
+  assert(m_nonzero : ~(inject_Z m == 0)).
+  intro H.
+  rewrite H in x_is_m_2e.
   
   rewrite Qmult_0_l in x_is_m_2e.
   apply x_nonzero.
@@ -614,7 +535,7 @@ Proof.
   assert (binadeQ (inject_Z m) m_nonzero < 'p)%Z.
   unfold binadeQ.
   set (mpos := exist _ (Qabs (inject_Z m))
-                     (abs_nonzero (inject_Z m) m_nonzero)).
+                     (Qabs_nonzero (inject_Z m) m_nonzero)).
   apply twopower_binade_lt.
   easy.
 
@@ -701,14 +622,18 @@ Variable z : binary_float r.
 
 (* Next, we assume that x and y are nonzero, and deduce that x/y is, too. *)
 
-Hypothesis x_nonzero : ~ 0 == proj1_sig x.
-Hypothesis y_nonzero : ~ 0 == proj1_sig y.
+Hypothesis x_nonzero : ~ proj1_sig x == 0.
+Hypothesis y_nonzero : ~ proj1_sig y == 0.
 
 Let x_over_y := proj1_sig x / proj1_sig y.
 
-Lemma x_over_y_nonzero : nonzero x_over_y.
+Lemma x_over_y_nonzero : ~(x_over_y == 0).
 Proof.
-  now apply nonzero_div.
+  subst x_over_y.
+  contradict x_nonzero.
+  scale_by (/(proj1_sig y)).
+  rewrite x_nonzero.
+  ring.
 Qed.
 
 (* We assume that floor(x/y) <= z <= ceiling(x/y). *)
@@ -759,12 +684,12 @@ Proof.
   setoid_replace ((proj1_sig x - proj1_sig y * proj1_sig z) / proj1_sig y)
     with (proj1_sig x / proj1_sig y - proj1_sig z) by field.
   apply x_over_y_minus_z_small.
-  intro. apply y_nonzero. easy.
+  easy.
   assumption.
   intro. apply y_nonzero. apply Qabs_zero. easy.
   intro. apply y_nonzero. apply Qabs_zero. easy.
   apply Qinv_lt_0_compat.
-  apply abs_nonzero.
+  apply Qabs_nonzero.
   assumption.
 
   subst quantum.
@@ -891,21 +816,15 @@ Proof.
   apply Qdiv_lt_le.
 
   apply Qabs_case.
-  apply nonzero_and_nonneg_implies_positive.
-  intro. apply x_nonzero. symmetry. easy.
-  intro. assert (0 <= -proj1_sig x).
-  apply Qopp_le_mono.
-  setoid_replace (- - proj1_sig x) with (proj1_sig x) by field.
-  setoid_replace (- 0) with 0 by easy.
-  easy.
-  apply nonzero_and_nonneg_implies_positive.
   intro.
-  apply x_nonzero.
-  setoid_replace (proj1_sig x) with (- - proj1_sig x) by field.
-  now rewrite H1.
+  apply Qle_not_eq.
   easy.
-  unfold twopowerQ.
-  destruct (twopower b). simpl. easy.
+  now apply Qnot_eq_sym.
+
+  intro.
+  rearrange_goal (proj1_sig x < 0).
+  now apply Qle_not_eq.
+  apply twopowerQ_positive.
 
   apply (twopowerQ_binadeQ_lt (a + 1) (proj1_sig x) (x_nonzero)).
   subst a. omega.
@@ -913,13 +832,8 @@ Proof.
   apply (twopowerQ_binadeQ_le b (proj1_sig y) (y_nonzero)).
   subst b. omega.
 
-  apply Qle_shift_div_r.
-
-  apply twopowerQ_positive.
-  rewrite twopowerQ_mul.
-  apply twopowerQ_monotonic_le.
-  omega.
-
+  twopower_right.
+  apply Qle_refl.
   easy.
 Qed.
 
@@ -964,10 +878,10 @@ Qed.
 (* Minor annoyance: we have to show that z is nonzero before
    we can compute its binade. *)
 
-Lemma z_nonzero : nonzero (proj1_sig z).
+Lemma z_nonzero : ~(proj1_sig z == 0).
 Proof.
   (* It's enough to show that abs z is positive. *)
-  apply abs_nonzero_inv.
+  apply Qabs_nonzero_inv.
   (* We show that 0 < 2^(q+r-1) <= floor (x / y) <= |z|. *)
   apply Qlt_le_trans with (y := inject_Z (floor (Qabs x_over_y))).
   replace 0 with (inject_Z 0) by (now compute).
@@ -1063,7 +977,7 @@ Theorem first_separation_theorem : x_over_y == proj1_sig z.
 Proof.
   unfold x_over_y.
   apply Qdiv_mul.
-  easy.
+  apply Qnot_eq_sym. easy.
   rewrite Qmult_comm.
   now rewrite x_is_yz.
 Qed.
@@ -1091,14 +1005,14 @@ Proof.
   subst a b c; unfold binadeQ;
   remember (
     exist (fun x0 : Q => (0 < x0)%Q) (Qabs x_over_y)
-    (abs_nonzero x_over_y x_over_y_nonzero)
+    (Qabs_nonzero x_over_y x_over_y_nonzero)
   ) as x_over_y_pos;
   remember (
     exist (fun x0 : Q => (0 < x0)%Q) (Qabs (proj1_sig x))
-    (abs_nonzero (proj1_sig x) x_nonzero)) as x_pos;
+    (Qabs_nonzero (proj1_sig x) x_nonzero)) as x_pos;
   remember (
     exist (fun x0 : Q => (0 < x0)%Q) (Qabs (proj1_sig y))
-    (abs_nonzero (proj1_sig y) y_nonzero)) as y_pos;
+    (Qabs_nonzero (proj1_sig y) y_nonzero)) as y_pos;
   assert (x_over_y_pos == x_pos / y_pos)%QPos as H by (
     unfold QPos.eq; rewrite Heqx_pos, Heqy_pos, Heqx_over_y_pos;
     setoid_rewrite Qabs_div; easy); rewrite H; apply binade_div.
@@ -1119,9 +1033,9 @@ Proof.
 Qed.
 
 
-Lemma z_nonzero2 : ~ 0 == (proj1_sig z).
+Lemma z_nonzero2 : ~ proj1_sig z == 0.
 Proof.
-  apply abs_nonzero_inv.
+  apply Qabs_nonzero_inv.
   apply Qlt_le_trans with (y := twopowerQ c).
   apply twopowerQ_positive.
   apply z_large2.
@@ -1182,7 +1096,7 @@ Theorem second_separation_theorem : x_over_y == proj1_sig z.
 Proof.
   unfold x_over_y.
   apply Qdiv_mul.
-  easy.
+  apply Qnot_eq_sym. easy.
   rewrite Qmult_comm.
   now rewrite x_is_yz2.
 Qed.

@@ -125,7 +125,6 @@ Section NonzeroFloatResults.
         + apply Qabs_triangle.
         + setoid_replace (Qabs (inject_Z 1)) with 1 by easy.
           apply bob.
-          SearchAbout (Qabs (inject_Z _)).
           rewrite Qabs_Zabs.
           apply is_integer_inject_Z.
           apply is_integer_twopowerQ.

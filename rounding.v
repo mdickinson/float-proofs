@@ -1,7 +1,7 @@
 (* Definitions and properties of rounding modes for binary floats. *)
 
-(* We start with the round_toward_negative (rtn) rounding mode.  Given a rational
-   number x, we'll construct the closest binary float (at precision p)
+(* We start with the round_toward_negative (rtn) rounding mode.  Given a
+   rational number x, we'll construct the closest binary float (at precision p)
    that doesn't exceed x.
 
    We'll construct the float by giving its significand and exponent.  To do
@@ -167,7 +167,8 @@ Add Parametric Morphism (p : positive) : (round_toward_negative p) with
     signature Qeq ==> (@float_eq p) as round_toward_negative_morphism.
 Proof.
   intros x y x_eq_y; apply float_le_antisymm;
-  rewrite <- round_toward_negative_spec; [ rewrite <- x_eq_y | rewrite x_eq_y ];
+  rewrite <- round_toward_negative_spec;
+  [ rewrite <- x_eq_y | rewrite x_eq_y ];
   apply round_toward_negative_spec; apply float_le_refl.
 Qed.
 
@@ -184,28 +185,6 @@ Proof.
     assert (binadeQ y n0 = binadeQ x n)%Z by (now apply binadeQ_equiv).
     rewrite H0.
     now setoid_rewrite <- H.
-Qed.
-
-(* XXX This one should go elsewhere. *)
-
-Add Parametric Morphism (p : positive) : (proj1_sig (A:=Q) (P:=representable p)) with
-    signature (@float_eq p) ==> Qeq as inclusion_morphism.
-Proof.
-  intros x y.
-  unfold float_eq.
-  easy.
-Qed.
-
-(* XXX And this one, too. *)
-
-Add Parametric Morphism (p : positive) : (@float_le p)
-    with signature (@float_eq p) ==> (@float_eq p) ==> iff as float_le_morphism.
-Proof.
-  unfold float_eq, float_le.
-  intros.
-  rewrite H.
-  rewrite H0.
-  easy.
 Qed.
 
 Lemma round_toward_negative_monotonic (p : positive) x y :
