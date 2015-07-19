@@ -63,6 +63,16 @@ Proof.
   intro; split; intro; [scale_by z | scale_by (/z)]; rearrange.
 Qed.
 
+Lemma Qdiv_eq_mult x y z : 0 < z -> (x / z == y  <->  x == y * z).
+Proof.
+  intro; split; intro; [scale_by (/z) | scale_by z]; rearrange.
+Qed.
+
+Lemma Qmult_eq_div x y z : ~(z == 0) -> (x * z == y  <->  x == y / z).
+Proof.
+  intro; split; intro; [scale_by z | scale_by (/z)]; rearrange.
+Qed.
+
 Lemma Qle_ge_cases (x y : Q) : x <= y  \/  y <= x.
 Proof.
   destruct (Qlt_le_dec x y); intuition.

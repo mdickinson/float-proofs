@@ -2,18 +2,31 @@ Require Import QArith.
 
 Local Open Scope Q.
 
+
+SearchAbout (/_).
+
+Lemma Qinv_nonzero q : ~(q == 0) -> ~(/q == 0).
+Proof.
+  intro H; contradict H; rewrite <- Qinv_involutive; now rewrite H.
+Qed.
+
 Ltac discharge_positivity_constraints :=
   match goal with
   | [ _ : 0 < ?z |- ~(?z == 0) ] => apply Qnot_eq_sym, Qlt_not_eq; assumption
   | [ _ : 0 < ?z |- 0 < / ?z ] => apply Qinv_lt_0_compat; assumption
   | [ _ : 0 < ?z |- 0 < ?z ] => assumption
+  | [ _ : ~(?z == 0) |- ~(?z == 0) ] => assumption
+  | [ _ : ~(?z == 0) |- ~(/?z == 0) ] => apply Qinv_nonzero; assumption
+  | [ _ : 0 < ?z |- ~(/?z == 0) ] =>
+    apply Qinv_nonzero, Qnot_eq_sym, Qlt_not_eq; assumption
   end.
 
 Ltac field_pos := field; discharge_positivity_constraints.
 
-
 Ltac scale_by multiplier :=
   match goal with
+  | [ |- _ == _ ] => apply Qmult_inj_r with (z := multiplier);
+      [discharge_positivity_constraints | ]
   | [ |- _ <= _ ] => apply Qmult_le_r with (z := multiplier);
       [discharge_positivity_constraints | ]
   | [ |- _ < _ ] => apply Qmult_lt_r with (z := multiplier);
