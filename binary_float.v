@@ -4,6 +4,7 @@
 Require Import QArith.
 Require Import Qabs.
 
+Require Import rearrange_tactic.
 Require Import remedial.
 Require Import floor_and_ceiling.
 Require Import qpos.

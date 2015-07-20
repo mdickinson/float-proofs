@@ -1,6 +1,29 @@
 Require Import QArith.
+Require Import Qabs.
 
 Local Open Scope Q.
+
+Lemma Qle_not_eq (a b : Q) : a <= b -> ~(a == b) -> a < b.
+Proof.
+  auto with qarith.
+Qed.
+
+Lemma Qabs_zero (x : Q) : Qabs x == 0  ->  x == 0.
+Proof.
+  apply Qabs_case; intros _ H; [ | rewrite <- Qopp_opp]; rewrite H; easy.
+Qed.
+
+Lemma Qabs_nonzero (x : Q) : ~(x == 0)  -> 0 < Qabs x.
+Proof.
+  intro H; apply Qle_not_eq.
+  - apply Qabs_nonneg.
+  - contradict H; apply Qabs_zero; now symmetry.
+Qed.
+
+Lemma Qabs_nonzero2 (x : Q) : ~(x == 0) -> ~(Qabs x == 0).
+Proof.
+  intro H; contradict H; now apply Qabs_zero.
+Qed.
 
 Lemma Qinv_nonzero q : ~(q == 0) -> ~(/q == 0).
 Proof.
@@ -16,9 +39,11 @@ Ltac discharge_positivity_constraints :=
   | [ _ : ~(?z == 0) |- ~(/?z == 0) ] => apply Qinv_nonzero; assumption
   | [ _ : 0 < ?z |- ~(/?z == 0) ] =>
     apply Qinv_nonzero, Qnot_eq_sym, Qlt_not_eq; assumption
+  | [ _ : ~(?z == 0) |- 0 < Qabs (?z) ] => apply Qabs_nonzero; assumption
+  | [ _ : ~(?z == 0) |- ~(Qabs (?z) == 0) ] => apply Qabs_nonzero2; assumption
   end.
 
-Ltac field_pos := field; discharge_positivity_constraints.
+Ltac field_pos := field; repeat split; discharge_positivity_constraints.
 
 Ltac scale_by multiplier :=
   match goal with

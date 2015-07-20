@@ -214,6 +214,18 @@ Proof.
   rewrite x_int; now rewrite y_int.
 Qed.
 
+Lemma small_integer_is_zero (x : Q) :
+  is_integer x -> Qabs x < 1 -> x == 0.
+Proof.
+  destruct 1 as [n H]; rewrite <- H; clear H; rewrite Qabs_Zabs.
+  setoid_replace 0 with (inject_Z 0) by easy;
+  setoid_replace 1 with (inject_Z (Z.succ 0)) by easy;
+  rewrite inject_Z_injective;
+  rewrite <- Zlt_Qlt; intro;
+  assert (-0 <= n <= 0)%Z by (now apply Z.abs_le, Z.lt_succ_r).
+  apply Z.le_antisymm; easy.
+Qed.
+
 Lemma floor_integer (q : Q) : is_integer q <-> inject_Z (floor q) == q.
 Proof.
   unfold is_integer; split; intro H;
