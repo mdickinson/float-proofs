@@ -43,11 +43,6 @@ Lemma Qlt_nge (x y : Q) : x < y <-> ~(y <= x).
   split; auto with qarith.
 Qed.
 
-Lemma Qle_not_eq (a b : Q) : a <= b -> ~(a == b) -> a < b.
-Proof.
-  auto with qarith.
-Qed.
-
 Lemma Qeq_le_incl (a b : Q) : a == b -> a <= b.
 Proof.
   intro H; rewrite H; apply Qle_refl.
@@ -113,16 +108,9 @@ Proof.
   destruct (Qlt_le_dec x y); intuition.
 Qed.
 
-Lemma Qabs_zero (x : Q) : Qabs x == 0  ->  x == 0.
+Lemma Qlt_gt_cases (x y : Q) : ~(x == y) -> x < y \/ y < x.
 Proof.
-  apply Qabs_case; intros _ H; [ | rewrite <- Qopp_opp]; rewrite H; easy.
-Qed.
-
-Lemma Qabs_nonzero (x : Q) : ~(x == 0)  -> 0 < Qabs x.
-Proof.
-  intro H; apply Qle_not_eq.
-  - apply Qabs_nonneg.
-  - contradict H. apply Qabs_zero. now symmetry.
+  case (Q_dec x y); intuition.
 Qed.
 
 Lemma Qabs_div (a b : Q) :
