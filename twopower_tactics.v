@@ -65,6 +65,7 @@ Ltac twopower_collect :=
       | [ |- _ < twopowerQ _ * twopowerQ _ ] => rewrite <- twopowerQ_mul
       | [ |- _ <= twopowerQ _ / twopowerQ _ ] => rewrite <- twopowerQ_div
       | [ |- _ < twopowerQ _ / twopowerQ _ ] => rewrite <- twopowerQ_div
+      | [ |- twopowerQ _ / twopowerQ _ == _ ] => rewrite <- twopowerQ_div
       | [ |- twopowerQ _ * twopowerQ _ <= _ ] => rewrite <- twopowerQ_mul
       | [ |- _ / twopowerQ _ * twopowerQ _ <= _ ] =>
         unfold Qdiv; rewrite <- twopowerQ_inv;
