@@ -1,5 +1,4 @@
-(* Define subsets of the rationals representable as binary floats with various
-   precisions. *)
+(* Prove the two main separation lemmas. *)
 
 Require Import QArith.
 Require Import Qabs.
@@ -8,414 +7,23 @@ Require Import rearrange_tactic.
 Require Import remedial.
 Require Import qpos.
 Require Import floor_and_ceiling.
+Require Import is_multiple_of.
 Require Import twopower.
 Require Import twopower_tactics.
 Require Import binary_float.
 
 Open Scope Q.
 
-(* Some remedial lemmas. *)
-
-Lemma Qneg_le : forall a b, -a < b -> -b < a.
-Proof.
-  rearrange.
-Qed.
-
-
-Lemma Qle_shift_mul_r a b c : 0 < b -> a / b <= c -> a <= c * b.
-Proof.
-  intros b_pos H.
-  apply Qmult_lt_0_le_reg_r with (z := / b).
-  now apply Qinv_lt_0_compat.
-  setoid_replace (c * b / b) with c by field.
-  apply H.
-  intro. symmetry in H0. revert H0.
-  now apply Qlt_not_eq.
-Qed.
-
-Lemma Qle_shift_mul_l a b c : 0 < b -> a <= c / b -> a * b <= c.
-Proof.
-  intros b_pos H.
-  apply Qmult_lt_0_le_reg_r with (z := /b).
-  now apply Qinv_lt_0_compat.
-  setoid_replace (a * b / b) with a by field.
-  apply H.
-  intro. symmetry in H0.  revert H0.
-  now apply Qlt_not_eq.
-Qed.
-
-
-Lemma Qlt_gt_cases (x y : Q) : ~(x == y) -> x < y \/ y < x.
-Proof.
-  case (Q_dec x y); intuition.
-Qed.
-
-Lemma Qpositive_nonzero x : 0 < x  ->  ~(0 == x).
-Proof.
-  intros H H0; now rewrite <- H0 in H.
-Qed.
-
-
-Lemma lt_sum_is_diff_lt (a b c : Q) : a < b + c  <->  a - c < b.
-Proof.
-  split; intro.
-
-  apply Qplus_lt_r with (z := c).
-  setoid_replace (c + (a - c)) with a by ring.
-  setoid_replace (c + b) with (b + c) by ring.
-  easy.
-
-  apply Qplus_lt_r with (z := -c).
-  setoid_replace (-c + a) with (a - c) by ring.
-  setoid_replace (-c + (b + c)) with b by ring.
-  easy.
-Qed.
-
-(* XXX Delete me. *)
-
-Lemma Qdiv_mul (a b c : Q) :
-  (~ 0 == b) ->  (a / b == c  <->  a == c * b).
-Proof.
-  intro; split; intro.
-
-  setoid_replace a with (a / b * b).
-  now rewrite H0.
-  rewrite Qmult_comm; rewrite Qmult_div_r.
-  easy.
-  now contradict H.
-
-  setoid_replace c with (c * b / b).
-  now rewrite H0.
-  rewrite Qdiv_mult_l.
-  easy.
-  now contradict H.
-Qed.
-
-Lemma Qdiv_lt_le (a b c d : Q) :
-  0 < a  ->  0 < c  ->
-  a < b  ->  c <= d  ->  a / d < b / c.
-Proof.
-  intros.
-  assert (0 < d) by (apply Qlt_le_trans with (y := c); assumption).
-  assert (0 < b) by (apply Qlt_trans with (y := a); assumption).
-
-  apply Qmult_lt_r with (z := c * d).
-  apply Q_mul_pos_pos; assumption.
-
-  setoid_replace (a / d * (c * d)) with (a * c) by field.
-  setoid_replace (b / c * (c * d)) with (b * d) by field.
-
-  apply Qlt_le_trans with (y := b * c).
-  apply Qmult_lt_r; assumption.
-  apply Qmult_le_l; assumption.
-  auto with qarith.
-  auto with qarith.
-Qed.
-
-
 Definition floorQ (q : Q) := inject_Z (floor q).
 
 Definition ceilingQ (q : Q) := inject_Z (ceiling q).
 
-Lemma neg_floorQ_is_ceilingQ_neg (q : Q) :
-  - floorQ q == ceilingQ (- q).
-Proof.
-  unfold floorQ, ceilingQ; rewrite <- inject_Z_opp;
-  now rewrite neg_floor_is_ceiling_neg.
-Qed.
-
-Lemma twopowerQ_nonzero (p : Z) : ~ 0 == twopowerQ p.
-Proof.
-  apply Qpositive_nonzero; apply twopowerQ_positive.
-Qed.
-
-Lemma twopowerQ_monotonic_le (p q : Z) :
-  (p <= q)%Z  ->  twopowerQ p <= twopowerQ q.
-Proof.
-  apply twopower_monotonic_le.
-Qed.
-
-
-Lemma twopowerQ_injective_le (p q : Z) :
-  twopowerQ p <= twopowerQ q  ->  (p <= q)%Z.
-Proof.
-  apply twopower_injective_le.
-Qed.
-
-
-Lemma twopowerQ_injective_lt (p q : Z) :
-  twopowerQ p < twopowerQ q  ->  (p < q)%Z.
-Proof.
-  apply twopower_injective_lt.
-Qed.
-
-
-(* Relationship between 2^_ and twopower. *)
-
-Lemma twopowerQ_twopower_nonneg (m : Z) :
-  (0 <= m)%Z  ->  twopowerQ m == inject_Z (2 ^ m).
-Proof.
-  unfold twopowerQ. simpl. intro.
-  symmetry.
-  now apply Qpower.Zpower_Qpower.
-Qed.
-
-Lemma twopowerQ_twopower_pos (p : positive) :
-  twopowerQ ('p) == inject_Z (2 ^ 'p).
-Proof.
-  now apply twopowerQ_twopower_nonneg.
-Qed.
-
-Lemma twopowerQ_mul (x y : Z) :
-  twopowerQ x * twopowerQ y == twopowerQ (x + y).
-Proof.
-  unfold twopowerQ; simpl; now rewrite Qpower.Qpower_plus.
-Qed.
-
-Lemma twopowerQ_div (x y : Z) :
-  twopowerQ x / twopowerQ y == twopowerQ (x - y).
-Proof.
-  unfold twopowerQ; simpl.
-  rewrite Qdiv_mul.
-  rewrite twopowerQ_mul.
-  replace (x - y + y)%Z with x by ring.
-  easy.
-  apply twopowerQ_nonzero.
-Qed.
-
-Lemma twopowerQ_inv (x : Z) :
-  / twopowerQ x == twopowerQ (-x).
-Proof.
-  setoid_replace (/ twopowerQ x) with (1 / twopowerQ x) by field.
-  setoid_replace 1 with (twopowerQ 0) by now compute.
-  replace (-x)%Z with (0 - x)%Z by ring.
-  apply twopowerQ_div.
-  apply Qnot_eq_sym, Qlt_not_eq, two_to_the_power_n_is_positive.
-Qed.
-
-Lemma is_integer_twopower (x : Z) :
-  (0 <= x)%Z -> is_integer (proj1_sig (twopower x)).
-Proof.
-  intro; simpl.
-  rewrite <- Qpower.Zpower_Qpower.
-  apply is_integer_inject_Z. easy.
-Qed.
-
-Lemma small_integer_is_zero (x : Q) :
-  is_integer x -> Qabs x < 1 -> 0 == x.
-Proof.
-  intro.
-  apply Qabs_case; intros.
-
-  setoid_replace x with (inject_Z (floor x)) by
-      (symmetry; now apply floor_integer).
-  apply inject_Z_injective.
-  rewrite floor_spec_alt. auto.
-
-  setoid_replace x with (
-    inject_Z (ceiling x)) by (symmetry; now apply ceiling_integer).
-  apply inject_Z_injective.
-  rewrite ceiling_spec_alt.
-  setoid_replace (inject_Z 0 - 1) with (- (1)) by ring.
-  assert (-(1) < x) by (now apply Qneg_le).
-  auto.
-Qed.
-
-
-Lemma Qabs_Zabs (x : Z) : Qabs (inject_Z x) == inject_Z (Z.abs x).
-Proof.
-  now unfold Qabs.
-Qed.
-
-Lemma Qabs_twopower (x : Z) : Qabs (twopowerQ x) == twopowerQ x.
-Proof.
-  apply Qabs_pos, Qlt_le_weak, twopowerQ_positive.
-Qed.
-
-(* for any integers x and y and rational number q, 2^x <= q * 2^y -> 2^(x - y)
-   <= q *)
-
-Lemma twopower_lr (x y : Z) (q : Q) :
-  twopowerQ x <= q * twopowerQ y  ->  twopowerQ (x - y) <= q.
-Proof.
-  unfold twopowerQ.
-  (* multiply both sides by 2^y on the right using Qmult_le_r. *)
-  (*      : forall x y z : Q, 0 < z -> (x * z <= y * z <-> x <= y) *)
-  intro.
-  apply Qmult_le_r with (z := proj1_sig (twopower y)).
-  (* Now trying to show that 0 < proj1_sig (...), but that
-     should be immediate. *)
-  destruct (twopower y). easy.
-  replace (proj1_sig (twopower y)) with (twopowerQ y).
-  replace (proj1_sig (twopower (x - y))) with (twopowerQ (x - y)).
-  replace (proj1_sig (twopower y)) with (twopowerQ y) in H.
-  replace (proj1_sig (twopower x)) with (twopowerQ x) in H.
-  assert (twopowerQ (x - y) * twopowerQ y == twopowerQ x).
-
-  assert (twopowerQ (x - y) * twopowerQ y == twopowerQ ((x - y) + y)).
-  apply twopowerQ_mul.
-  rewrite H0.
-  assert (x - y + y = x)%Z.
-  auto with zarith.
-  rewrite H1. easy.
-  rewrite H0. easy.
-  easy.
-  easy.
-  easy.
-  easy.
-Qed.
-
-Lemma rhs_negative_lt (x y : Q) : x < -y -> y < -x.
-Proof.
-  intro.
-  setoid_replace y with (- - y).
-  now rewrite <- Qopp_lt_mono.
-  symmetry.
-  apply Qopp_opp.
-Qed.
-
-(*
-   ulp of a nonzero float x at precision p is 2**(binade x - p + 1).
-
-   if x = m * 2**e with 2**(p-1) <= m < 2**p, then
-
-   2**(p-1+e) <= x < 2**(p+e), so binade(x) = p-1+e.
-   so e = binade(x) - p + 1.
-*)
-
-Definition ulp p (x : binary_float p) (x_nonzero : ~(proj1_sig x == 0)) : Q :=
-  twopowerQ (binadeQ (proj1_sig x) x_nonzero - 'p + 1).
-
-Definition is_multiple_of (y x : Q) :=
-  exists (m : Q), is_integer m  /\  x == m * y.
-
-Add Morphism is_multiple_of : is_multiple_of_morphism.
-  intros.
-  unfold is_multiple_of.
-  split; intro.
-  destruct H1. exists x1. split. easy. rewrite <- H0. rewrite <- H. easy.
-  destruct H1. exists x1. split. easy. rewrite H0. rewrite H. easy.
-Qed.
-
-Lemma is_multiple_of_additive (m a b : Q) :
-  is_multiple_of m a -> is_multiple_of m b -> is_multiple_of m (a + b).
-Proof.
-  unfold is_multiple_of.
-  intros.
-  destruct H.
-  destruct H0.
-  exists (x + x0).
-  split.
-  now apply is_integer_add.
-  destruct H.
-  destruct H0.
-  rewrite H1.
-  rewrite H2.
-  symmetry.
-  apply Qmult_plus_distr_l.
-Qed.
-
-Lemma is_multiple_of_neg (m a : Q) :
-  is_multiple_of m a -> is_multiple_of m (-a).
-Proof.
-  unfold is_multiple_of; intro.
-  destruct H. destruct H.
-  exists (-x).
-  split.
-  now apply is_integer_neg.
-  rewrite H0.
-  ring.
-Qed.
-
-
-Lemma is_multiple_of_abs (m a : Q) :
-  is_multiple_of m a -> is_multiple_of m (Qabs a).
-Proof.
-  apply Qabs_case; intros; [ easy | now apply is_multiple_of_neg].
-Qed.
-
-Lemma is_multiple_of_sub (m a b : Q) :
-  is_multiple_of m a -> is_multiple_of m b -> is_multiple_of m (a - b).
-Proof.
-  intros; apply is_multiple_of_additive; [ | apply is_multiple_of_neg]; easy.
-Qed.
-
-Lemma is_multiple_of_product (a b c d : Q):
-  is_multiple_of a b -> is_multiple_of c d -> is_multiple_of (a*c) (b*d).
-Proof.
-  intros a_divides_b c_divides_d.
-  destruct a_divides_b as [m a_divides_b].
-  destruct c_divides_d as [n c_divides_d].
-  exists (m*n).
-  split.
-  now apply is_integer_mul.
-  rewrite (proj2 a_divides_b).
-  rewrite (proj2 c_divides_d).
-  ring.
-Qed.
-
-
-Lemma is_multiple_of_transitive (a b c : Q):
-  is_multiple_of a b -> is_multiple_of b c -> is_multiple_of a c.
-Proof.
-  unfold is_multiple_of; intros ab bc; destruct ab as [m Hab];
-  destruct bc as [n Hbc]; exists (n * m); split.
-    now apply is_integer_mul.
-    rewrite (proj2 Hbc); rewrite (proj2 Hab); ring.
-Qed.
-
-
-Lemma small_multiple_is_zero (m a : Q) :
-  is_multiple_of m a  ->  Qabs a < m  ->  a == 0.
-Proof.
-  unfold is_multiple_of.
-  intros a_multiple a_bounded.
-  assert (0 < m) as m_positive by
-        (apply Qle_lt_trans with (y := Qabs a); [apply Qabs_nonneg | easy]).
-
-  assert (Qabs m == m) as m_positive2 by
-        (apply Qabs_pos; now apply Qlt_le_weak).
-
-  assert (~ m == 0) as m_nonzero.
-  intro. rewrite H in m_positive.
-  revert m_positive. easy.
-
-  destruct a_multiple as [x is_multiple].
-  destruct is_multiple as [x_is_integer a_is_xm].
-  rewrite a_is_xm.
-
-  cut (x == 0).
-  intro x_zero. rewrite x_zero. ring.
-
-  assert (x == a / m) as x_is_a_by_m.
-  rewrite a_is_xm.
-  field. easy.
-
-  assert (Qabs x < 1).
-  rewrite x_is_a_by_m.
-  rewrite Qabs_div.
-  apply Qlt_shift_div_r.
-  now rewrite m_positive2.
-
-  rewrite m_positive2.
-  now ring_simplify.
-
-  now contradict m_nonzero.
-  symmetry.
-  now apply small_integer_is_zero.
-Qed.
-
-
 Lemma is_multiple_of_twopower (m n : Z) :
   (m <= n)%Z  ->  is_multiple_of (twopowerQ m) (twopowerQ n).
 Proof.
-  unfold is_multiple_of.
-  exists (twopowerQ (n - m)).
-  split.
-  apply is_integer_twopower.
-  omega.
-  rewrite twopowerQ_mul.
-  now replace (n - m + m)%Z with n by ring.
+  exists (twopowerQ (n - m)); split.
+  - apply is_integer_twopowerQ; omega.
+  - now twopower_left.
 Qed.
 
 (* We need to know that binadeQ behaves nicely with respect to multiplication
@@ -479,6 +87,18 @@ Proof.
 Qed.
 
 
+(*
+   ulp of a nonzero float x at precision p is 2**(binade x - p + 1).
+
+   if x = m * 2**e with 2**(p-1) <= m < 2**p, then
+
+   2**(p-1+e) <= x < 2**(p+e), so binade(x) = p-1+e.
+   so e = binade(x) - p + 1.
+*)
+
+Definition ulp p (x : binary_float p) (x_nonzero : ~(proj1_sig x == 0)) : Q :=
+  twopowerQ (binadeQ (proj1_sig x) x_nonzero - 'p + 1).
+
 Lemma is_multiple_of_ulp p (x : binary_float p)
   (x_nonzero : ~(proj1_sig x == 0)) :
     is_multiple_of (ulp _ x x_nonzero) (proj1_sig x).
@@ -506,7 +126,7 @@ Proof.
   assert(m_nonzero : ~(inject_Z m == 0)).
   intro H.
   rewrite H in x_is_m_2e.
-  
+
   rewrite Qmult_0_l in x_is_m_2e.
   apply x_nonzero.
   easy.
@@ -530,7 +150,7 @@ Proof.
   split.
   apply is_integer_mul.
   apply is_integer_inject_Z.
-  apply is_integer_twopower.
+  apply is_integer_twopowerQ.
 
   assert (binadeQ (inject_Z m) m_nonzero < 'p)%Z.
   unfold binadeQ.
@@ -542,7 +162,7 @@ Proof.
   omega.
 
   rewrite <- Qmult_assoc.
-  rewrite twopowerQ_mul.
+  rewrite <- twopowerQ_mul.
   replace ('p - 1 - binadeQ (inject_Z m) m_nonzero +
            (binadeQ (inject_Z m) m_nonzero + e - 'p + 1))%Z with e by ring.
   reflexivity.
@@ -554,17 +174,6 @@ Lemma large_floats_are_integral (p : positive) (x : binary_float p) :
 Proof.
   apply large_representable_is_integer; now destruct x.
 Qed.
-
-Lemma rhs_negative_le (x y : Q) : x <= -y -> y <= -x.
-Proof.
-  intro; setoid_replace y with (- - y) by ring; now rewrite <- Qopp_le_mono.
-Qed.
-
-Lemma lhs_negative_le (x y : Q) : -x <= y -> -y <= x.
-Proof.
-  intro; setoid_replace x with (- - x) by ring; now rewrite <- Qopp_le_mono.
-Qed.
-
 
 Lemma abs_floor (x y : Q) :
   inject_Z (floor x) <= y <= inject_Z (ceiling x)  ->
@@ -598,12 +207,8 @@ Proof.
   easy.
 
   (* case x <= 0, y <= 0 *)
-  apply rhs_negative_le.
-  rewrite <- inject_Z_opp.
-  rewrite neg_floor_is_ceiling_neg.
-  setoid_replace (- - x) with x.
-  easy.
-  apply Qopp_involutive.
+  rewrite <- neg_ceiling_is_floor_neg; rewrite inject_Z_opp.
+  destruct H. rearrange.
 Qed.
 
 
@@ -652,26 +257,16 @@ Let quantum := twopowerQ (b + 1).
 
 Lemma x_over_y_minus_z_small : Qabs (x_over_y - proj1_sig z) < 1.
 Proof.
+  apply Qabs_case; destruct z_bounds; intro.
   (* Split: show x/y - z < 1 and z - x/y < 1. *)
-  apply Qabs_case; intro.
-
-  (* To show: x/y - z < 1. *)
-  apply lt_sum_is_diff_lt.
-  rewrite Qplus_comm.
-  apply lt_sum_is_diff_lt.
-  apply Qlt_le_trans with (y := inject_Z (floor x_over_y)).
-  apply lt_sum_is_diff_lt.
-  now apply floor_spec_alt.
-  apply z_bounds.
-
-  setoid_replace (-(x_over_y - proj1_sig z)) with
-  (proj1_sig z - x_over_y) by ring.
-  apply lt_sum_is_diff_lt.
-  apply Qle_lt_trans with (y := inject_Z (ceiling x_over_y)).
-  apply z_bounds.
-  rewrite Qplus_comm.
-  apply lt_sum_is_diff_lt.
-  now apply ceiling_spec_alt.
+  - apply Qle_lt_trans with (y := x_over_y - floorQ x_over_y).
+    + rearrange.
+    + rearrange_goal (x_over_y < floorQ x_over_y + 1);
+      now apply floor_spec_alt.
+  - apply Qle_lt_trans with (y := ceilingQ x_over_y - x_over_y).
+    + rearrange.
+    + rearrange_goal (ceilingQ x_over_y - 1 < x_over_y).
+      now apply ceiling_spec_alt.
 Qed.
 
 Lemma x_minus_yz_small :
@@ -741,7 +336,7 @@ Proof.
 
   apply Qle_trans with (y := inject_Z (floor (Qabs x_over_y))).
   apply integer_le_floor.
-  apply is_integer_twopower.
+  apply is_integer_twopowerQ.
   assert (1 <= 'q)%Z by apply Pos.le_1_l.
   assert (1 <= 'r)%Z by apply Pos.le_1_l.
   auto with zarith.
@@ -805,36 +400,26 @@ Qed.
 
 Lemma a_minus_b_large : ('q + 'r - 1 < a - b + 1)%Z.
 Proof.
-  apply twopowerQ_injective_lt.
-  apply Qle_lt_trans with (y := Qabs x_over_y).
-  assumption.
-  clear c.
-  subst x_over_y.
-  rewrite Qabs_div.
-
+  apply twopowerQ_injective_lt;
+  apply Qle_lt_trans with (1 := x_over_y_large);
+  clear c; subst x_over_y;
+  rewrite Qabs_div; [ | discharge_positivity_constraints ];
   apply Qlt_le_trans with (y := twopowerQ (a + 1) / twopowerQ b).
-  apply Qdiv_lt_le.
-
-  apply Qabs_case.
-  intro.
-  apply Qle_not_eq.
-  easy.
-  now apply Qnot_eq_sym.
-
-  intro.
-  rearrange_goal (proj1_sig x < 0).
-  now apply Qle_not_eq.
-  apply twopowerQ_positive.
-
-  apply (twopowerQ_binadeQ_lt (a + 1) (proj1_sig x) (x_nonzero)).
-  subst a. omega.
-
-  apply (twopowerQ_binadeQ_le b (proj1_sig y) (y_nonzero)).
-  subst b. omega.
-
-  twopower_right.
-  apply Qle_refl.
-  easy.
+  - apply Qlt_le_trans with (y := twopowerQ (a + 1) / Qabs (proj1_sig y)).
+    + scale_by (Qabs (proj1_sig y));
+      rearrange_goal (Qabs (proj1_sig x) < twopowerQ (a + 1));
+      apply (twopowerQ_binadeQ_lt (a + 1) (proj1_sig x) (x_nonzero));
+      subst a; omega.
+    + pose proof (twopowerQ_positive b);
+      pose proof (twopowerQ_positive (a + 1));
+      scale_by (twopowerQ b);
+      scale_by (Qabs (proj1_sig y));
+      scale_by (/ (twopowerQ (a + 1)));
+      rearrange_goal (twopowerQ b <= Qabs (proj1_sig y));
+  
+      apply (twopowerQ_binadeQ_le b (proj1_sig y) (y_nonzero));
+      subst b; omega.
+  - twopower_right; apply Qle_refl.
 Qed.
 
 Lemma a_minus_b_large_le : ('q + 'r - 1 <= a - b)%Z.
@@ -888,7 +473,7 @@ Proof.
   apply Qlt_le_trans with (y := twopowerQ ('q + 'r - 1)).
   apply twopowerQ_positive.
   apply integer_le_floor.
-  apply is_integer_twopower.
+  apply is_integer_twopowerQ.
   assert (0 < 'q)%Z by easy; assert (0 < 'r)%Z by easy; omega.
   easy.
   now apply abs_floor.
@@ -901,7 +486,7 @@ Proof.
   apply integer_le_floor.
 
   (* Now showing that 2^c is integral. *)
-  apply is_integer_twopower.
+  apply is_integer_twopowerQ.
   subst c.
   apply twopowerQ_binadeQ_le.
   apply Qle_trans with (y := twopowerQ ('q + 'r - 1)).
@@ -935,7 +520,7 @@ Proof.
   apply is_multiple_of_transitive with (
     b := twopowerQ (b - 'q + 1) * twopowerQ (c - 'r + 1)).
   unfold quantum.
-  setoid_rewrite twopowerQ_mul.
+  setoid_rewrite <- twopowerQ_mul.
   apply is_multiple_of_twopower.
   (* need that q + r <= c + 1 *)
   assert ('q + 'r - 1 <= c)%Z by (now apply twopowerQ_binadeQ_le).
@@ -976,10 +561,9 @@ Qed.
 Theorem first_separation_theorem : x_over_y == proj1_sig z.
 Proof.
   unfold x_over_y.
-  apply Qdiv_mul.
-  apply Qnot_eq_sym. easy.
-  rewrite Qmult_comm.
-  now rewrite x_is_yz.
+  scale_by (proj1_sig y).
+  pose proof x_is_yz.
+  rearrange.
 Qed.
 
 
@@ -1023,7 +607,7 @@ Lemma z_large2 : twopowerQ c <= Qabs (proj1_sig z).
 Proof.
   apply Qle_trans with (y := floorQ (Qabs x_over_y)).
   apply integer_le_floor.
-  apply is_integer_twopower.
+  apply is_integer_twopowerQ.
   apply Z.le_trans with (m := ('p - 1)%Z).
   assert (0 < 'p)%Z by easy; omega.
   pose proof a_small; omega.
@@ -1062,7 +646,7 @@ Proof.
   apply is_multiple_of_transitive with (b := twopowerQ ((b - 'q + 1) + (
     c - 'r + 1))).
   apply is_multiple_of_twopower; pose proof a_small; omega.
-  rewrite <- twopowerQ_mul.
+  rewrite twopowerQ_mul.
   apply is_multiple_of_product.
   apply is_multiple_of_ulp.
   apply is_multiple_of_transitive with (
@@ -1095,10 +679,9 @@ Qed.
 Theorem second_separation_theorem : x_over_y == proj1_sig z.
 Proof.
   unfold x_over_y.
-  apply Qdiv_mul.
-  apply Qnot_eq_sym. easy.
-  rewrite Qmult_comm.
-  now rewrite x_is_yz2.
+  scale_by (proj1_sig y).
+  pose proof x_is_yz2.
+  rearrange.
 Qed.
 
 End SecondSeparationTheorem.
