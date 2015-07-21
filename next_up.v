@@ -10,11 +10,13 @@ Require Import Qabs.
 Require Import remedial.
 Require Import rearrange_tactic.
 Require Import floor_and_ceiling.
+Require Import qpos.
 Require Import twopower.
+Require Import cobinade.
 Require Import twopower_tactics.
 Require Import binary_float.
 
-Lemma bob x y : is_integer x -> is_integer y ->
+Lemma Qlt_le_succ x y : is_integer x -> is_integer y ->
                 (x + 1 <= y  <->  x < y).
 Proof.
   intros x_integer y_integer; split; intro H.
@@ -124,7 +126,7 @@ Section NonzeroFloatResults.
         with (y := Qabs (inject_Z float_significand) + Qabs (inject_Z 1)).
         + apply Qabs_triangle.
         + setoid_replace (Qabs (inject_Z 1)) with 1 by easy.
-          apply bob.
+          apply Qlt_le_succ.
           rewrite Qabs_Zabs.
           apply is_integer_inject_Z.
           apply is_integer_twopowerQ.
@@ -139,3 +141,95 @@ Section NonzeroFloatResults.
   End NextUp.
 
 End NonzeroFloatResults.
+
+Definition nonzero_lt_dec q : ~(q == 0) -> { 0 < q } + { 0 < -q }.
+Proof.
+  intro; destruct (Qlt_le_dec q 0).
+  - right; rearrange.
+  - left; apply Qle_not_eq; try apply Qnot_eq_sym; easy.
+Defined.
+
+
+Section NextUpAgain.
+  Variable p : positive.
+  Variable f : binary_float p.
+  Variable f_nonzero : ~(proj1_sig f == 0).
+
+  (* If f is positive then 1 <= f / 2^(binade f) < 2, so
+                        2^(p-1) <= f / 2^(binade f - p + 1) < 2^p.
+
+     If f is negative then 1/2 < (-f) / 2^(binade -f) <= 1, so
+        - (2^p) <= f / 2^(cobinade (-f) - p) < 2^(p-1).
+   *)
+
+  Let next_up_exponent :=
+    match nonzero_lt_dec f_nonzero with
+    | left q_positive => (binade (exist _ _ q_positive) - ' p + 1)%Z
+    | right negq_positive => (cobinade (exist _ _ negq_positive) - ' p)%Z
+    end.
+
+  Let next_up_significandQ := proj1_sig f / twopowerQ next_up_exponent.
+
+  Lemma next_up_significand_is_integral :
+    is_integer next_up_significandQ.
+  Proof.
+    subst next_up_significandQ next_up_exponent.
+    destruct (nonzero_lt_dec f_nonzero).
+    - (* positive case *)
+      destruct f as [x [m [e [m_bounded x_eq_m2e]]]].
+      simpl in *.
+      setoid_replace (x / twopowerQ (binade (exist (Qlt 0) x q) - ' p + 1))
+      with ((x / twopowerQ e) *
+            (twopowerQ e / twopowerQ (binade (exist (Qlt 0) x q) - ' p + 1))).
+      apply is_integer_mul.
+      + rewrite x_eq_m2e.
+        setoid_replace (inject_Z m * twopowerQ e / twopowerQ e) with (inject_Z m).
+        apply is_integer_inject_Z.
+        field.
+        apply twopowerQ_nonzero.
+      + rewrite <- twopowerQ_div.
+        apply is_integer_twopowerQ.
+        assert (binade (exist (Qlt 0) x q) < e + 'p)%Z.
+        apply twopower_binade_lt.
+        unfold QPos.lt. simpl.
+        rewrite x_eq_m2e.
+        setoid_replace (inject_Z 2 ^ (e + 'p)) with (twopowerQ (e + 'p)) by easy.
+        twopower_right.
+        apply Qle_lt_trans with (y := Qabs (inject_Z m)).
+        apply Qle_Qabs.
+        assumption.
+        omega.
+      + field.
+        split.
+        apply twopowerQ_nonzero.
+        apply twopowerQ_nonzero.
+    - (* negative case *)
+      destruct f as [x [m [e [m_bounded x_eq_m2e]]]].
+      simpl in *.
+      remember (cobinade (exist (Qlt 0) (- x)%Q q) - ' p)%Z as b.
+      rewrite x_eq_m2e.
+      setoid_replace (inject_Z m * twopowerQ e / twopowerQ b)
+      with (inject_Z m * (twopowerQ e / twopowerQ b)).
+      apply is_integer_mul.
+      apply is_integer_inject_Z.
+      rewrite <- twopowerQ_div.
+      apply is_integer_twopowerQ.
+      rewrite Heqb.
+      assert (cobinade (exist (Qlt 0) (-x)%Q q) <= e + ' p)%Z.
+      apply twopower_cobinade_le.
+      unfold QPos.le. simpl.
+      rewrite x_eq_m2e.
+      change (inject_Z 2 ^ (e + ' p)) with (twopowerQ (e + ' p)).
+      twopower_right.
+      apply Qlt_le_weak.
+      apply Qle_lt_trans with (y := Qabs (inject_Z m)).
+      apply Qle_Qabs_neg.
+      easy.
+      omega.
+      field.
+      apply twopowerQ_nonzero.
+  Qed.
+
+
+
+End NextUpAgain.
