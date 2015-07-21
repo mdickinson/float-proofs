@@ -217,7 +217,10 @@ Notation "/ p" := (QPos.inv p) : QPos_scope.
 Notation "1" := QPos.one : QPos_scope.
 Notation "2" := QPos.two : QPos_scope.
 
+Notation "x < y < z" := ((x < y) /\ (y < z)) : QPos_scope.
 Notation "x <= y < z" := ((x <= y) /\ (y < z)) : QPos_scope.
+Notation "x < y <= z" := ((x < y) /\ (y <= z)) : QPos_scope.
+Notation "x <= y <= z" := ((x <= y) /\ (y <= z)) : QPos_scope.
 
 (* Additional results about QPos. *)
 
