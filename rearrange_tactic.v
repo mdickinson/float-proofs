@@ -31,17 +31,19 @@ Proof.
 Qed.
 
 Ltac discharge_positivity_constraints :=
-  match goal with
-  | [ _ : 0 < ?z |- ~(?z == 0) ] => apply Qnot_eq_sym, Qlt_not_eq; assumption
-  | [ _ : 0 < ?z |- 0 < / ?z ] => apply Qinv_lt_0_compat; assumption
-  | [ _ : 0 < ?z |- 0 < ?z ] => assumption
-  | [ _ : ~(?z == 0) |- ~(?z == 0) ] => assumption
-  | [ _ : ~(?z == 0) |- ~(/?z == 0) ] => apply Qinv_nonzero; assumption
-  | [ _ : 0 < ?z |- ~(/?z == 0) ] =>
-    apply Qinv_nonzero, Qnot_eq_sym, Qlt_not_eq; assumption
-  | [ _ : ~(?z == 0) |- 0 < Qabs (?z) ] => apply Qabs_nonzero; assumption
-  | [ _ : ~(?z == 0) |- ~(Qabs (?z) == 0) ] => apply Qabs_nonzero2; assumption
-  end.
+  try match goal with
+      | [ _ : 0 < ?z |- ~(?z == 0) ] =>
+        apply Qnot_eq_sym, Qlt_not_eq; assumption
+      | [ _ : 0 < ?z |- 0 < / ?z ] => apply Qinv_lt_0_compat; assumption
+      | [ _ : 0 < ?z |- 0 < ?z ] => assumption
+      | [ _ : ~(?z == 0) |- ~(?z == 0) ] => assumption
+      | [ _ : ~(?z == 0) |- ~(/?z == 0) ] => apply Qinv_nonzero; assumption
+      | [ _ : 0 < ?z |- ~(/?z == 0) ] =>
+        apply Qinv_nonzero, Qnot_eq_sym, Qlt_not_eq; assumption
+      | [ _ : ~(?z == 0) |- 0 < Qabs (?z) ] => apply Qabs_nonzero; assumption
+      | [ _ : ~(?z == 0) |- ~(Qabs (?z) == 0) ] =>
+        apply Qabs_nonzero2; assumption
+      end.
 
 Ltac field_pos := field; repeat split; discharge_positivity_constraints.
 
