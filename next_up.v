@@ -23,6 +23,10 @@ Proof.
   omega.
 Qed.
 
+Lemma Zle_ge_pred (x y : Z) : (x <= y - 1  \/  y <= x)%Z.
+Proof.
+  omega.
+Qed.
 
 Lemma Qlt_le_succ x y : is_integer x -> is_integer y ->
                 (x + 1 <= y  <->  x < y).
@@ -37,6 +41,13 @@ Proof.
     apply Zlt_le_succ.
     rewrite Zlt_Qlt.
     easy.
+Qed.
+
+Lemma Qlt_le_pred x y : is_integer x -> is_integer y ->
+                        (x < y  <->  x <= y - 1).
+Proof.
+  setoid_replace (x <= y - 1) with (x + 1 <= y) by (split; intro; rearrange).
+  intros; split; now apply Qlt_le_succ.
 Qed.
 
 (* Move these elsewhere *)
@@ -97,7 +108,7 @@ Qed.
 (* Let's begin by defining next_up and next_down for positive floats,
    and showing their properties. *)
 
-Section NextUpPositive.
+Section NextUpNextDownPositive.
 
   Variable p : positive.
   Variable f : binary_float p.
@@ -110,14 +121,14 @@ Section NextUpPositive.
 
   Let f_as_qpos : QPos := exist _ (proj1_sig f) f_positive.
 
-  Let e := binade f_as_qpos.
+  Section NextUpPositive.
 
-  Let next_up_exponent := (e - 'p + 1)%Z.
+  Let next_up_exponent := (binade f_as_qpos - 'p + 1)%Z.
 
   Lemma _next_up_significand_is_integer :
     is_integer (proj1_sig f / twopowerQ next_up_exponent).
   Proof.
-    apply per_binade_representability; subst e;
+    apply per_binade_representability;
     change (proj1_sig f) with (proj1_sig f_as_qpos).
     - split.
       + apply twopower_binade_le; omega.
@@ -134,7 +145,7 @@ Section NextUpPositive.
     unfold next_up_exponent; twopower_right.
     change (proj1_sig f) with (proj1_sig f_as_qpos).
     apply twopower_binade_lt.
-    unfold e. omega.
+    omega.
   Qed.
 
   Definition next_up_positive : binary_float p.
@@ -170,16 +181,15 @@ Section NextUpPositive.
 
   (* Now we show that next_up_positive is in the same closed binade. *)
 
-  Lemma _f_lower_bound : twopowerQ e <= proj1_sig f.
+  Lemma _f_lower_bound : twopowerQ (binade f_as_qpos) <= proj1_sig f.
   Proof.
     change (proj1_sig f) with (proj1_sig f_as_qpos).
     apply twopower_binade_le.
-    subst e.
     apply Z.le_refl.
   Qed.
 
   Lemma _next_up_positive_upper_bound :
-    proj1_sig next_up_positive <= twopowerQ (e + 1).
+    proj1_sig next_up_positive <= twopowerQ (binade f_as_qpos + 1).
   Proof.
     unfold next_up_positive, next_up_significand, next_up_exponent.
     simpl.
@@ -190,18 +200,17 @@ Section NextUpPositive.
     apply is_integer_inject_Z.
     apply is_integer_twopowerQ.
     easy.
-    apply Qle_lt_trans with (y := proj1_sig f / twopowerQ (e - 'p + 1)).
+    apply Qle_lt_trans with (y := proj1_sig f / twopowerQ (binade f_as_qpos - 'p + 1)).
     apply floor_spec. apply Z.le_refl.
     twopower_right.
     change (proj1_sig f) with (proj1_sig f_as_qpos).
     apply twopower_binade_lt.
-    subst e.
     omega.
   Qed.
 
   (* Basic result: f < next_up f *)
 
-  Lemma lt_next_up_positive : (f < next_up_positive)%float.
+  Theorem lt_next_up_positive : (f < next_up_positive)%float.
   Proof.
     unfold float_lt, next_up_positive, next_up_significand. simpl.
     twopower_left.
@@ -215,7 +224,9 @@ Section NextUpPositive.
   (* Now the result that completely specifies next_up_positive:
      there are no floats between f and next_up_positive f. *)
 
-  Lemma next_up_positive_is_next_up (g : binary_float p) :
+  Let e := binade f_as_qpos.
+
+  Theorem next_up_positive_is_next_up (g : binary_float p) :
     (g <= f)%float  \/  (next_up_positive <= g)%float.
   Proof.
     (* Divide into cases. *)
@@ -274,7 +285,198 @@ Section NextUpPositive.
         easy.
   Qed.
 
-End NextUpPositive.
+  End NextUpPositive.
+
+  (* The definition of next_down is mostly analogous, using cobinade
+     instead of binade. *)
+
+  Section NextDownPositive.
+
+  Let next_down_exponent := (cobinade f_as_qpos - ' p)%Z.
+
+  Lemma _next_down_significand_is_integer :
+    is_integer (proj1_sig f / twopowerQ next_down_exponent).
+  Proof.
+    destruct f as [x [m [e [H0 H1]]]].
+    simpl.
+    rewrite H1.
+    unfold Qdiv.
+    rewrite <- twopowerQ_inv.
+    rewrite <- Qmult_assoc.
+    rewrite <- twopowerQ_mul.
+    unfold next_down_exponent.
+    apply is_integer_mul.
+    apply is_integer_inject_Z.
+    apply is_integer_twopowerQ.
+    assert (cobinade f_as_qpos <= e + 'p)%Z.
+    apply twopower_cobinade_le.
+    subst f_as_qpos.
+    simpl.
+    unfold QPos.le.
+    simpl.
+    change (inject_Z 2^(e + 'p)) with (twopowerQ (e + 'p)).
+    (* Showing that x <= 2^(e - 'p). *)
+    rewrite H1.
+    twopower_right.
+    rewrite <- Qabs_pos.
+    apply Qlt_le_weak.
+    easy.
+    scale_by (twopowerQ e).
+    apply twopowerQ_positive.
+    rewrite <- H1.
+    twopower_right.
+    twopower_left.
+    simpl in f_positive.
+    unfold float_lt in f_positive.
+    simpl in f_positive.
+    apply Qlt_le_weak.
+    easy.
+    omega.
+  Qed.
+
+  Let next_down_significand :=
+    (ceiling (proj1_sig f / twopowerQ next_down_exponent) - 1)%Z.
+
+  
+  Lemma stuart :
+    inject_Z (ceiling (proj1_sig f / twopowerQ next_down_exponent)) <=
+    twopowerQ (' p).
+  Proof.
+    apply integer_le_ceiling.
+    apply is_integer_twopowerQ.
+    easy.
+    unfold next_down_exponent.
+    twopower_right.
+    change (proj1_sig f) with (proj1_sig f_as_qpos).
+    apply twopower_cobinade_le.
+    apply Z.le_refl.
+  Qed.
+
+  Lemma kevin :
+    twopowerQ ('p - 1) <= inject_Z next_down_significand.
+  Proof.
+    unfold next_down_significand.
+
+    unfold Z.sub.
+    rewrite inject_Z_plus.
+    rewrite inject_Z_opp.
+    (* change (inject_Z 1) with 1. *)
+    apply Qlt_le_pred.
+    apply is_integer_twopowerQ.
+    assert (0 < ' p)%Z.
+    easy.
+    omega.
+    apply is_integer_inject_Z.
+    apply Qlt_le_trans
+    with (y := proj1_sig f / twopowerQ next_down_exponent).
+    unfold next_down_exponent.
+    twopower_left.
+    change (proj1_sig f) with (proj1_sig f_as_qpos).
+    apply twopower_cobinade_lt.
+    omega.
+    apply ceiling_spec.
+    apply Z.le_refl.
+  Qed.
+
+  Definition next_down_positive : binary_float p.
+  Proof.
+    refine (float_from_significand_and_exponent
+              p next_down_significand next_down_exponent _).
+    rewrite Qabs_pos.
+    apply Qle_trans
+    with (y := inject_Z (ceiling (proj1_sig f /
+                                            twopowerQ next_down_exponent))).
+    unfold next_down_significand.
+    rewrite <- Zle_Qle.
+    omega.
+    apply stuart.
+    apply Qle_trans with (y := twopowerQ ('p - 1)).
+    apply Qlt_le_weak.
+    apply twopowerQ_positive.
+    apply kevin.
+  Defined.
+
+  Theorem lt_next_down_positive : (next_down_positive < f)%float.
+  Proof.
+    unfold float_lt, next_down_positive, next_down_significand. simpl.
+    twopower_right.
+    generalize (proj1_sig f / twopowerQ next_down_exponent).
+    intro.
+    apply ceiling_spec_lt.
+    omega.
+  Qed.
+
+  Let e := cobinade f_as_qpos.
+
+  Theorem next_down_positive_is_next_down (g : binary_float p) :
+    (g <= next_down_positive)%float  \/  (f <= g)%float.
+  Proof.
+    destruct (Qlt_le_dec (proj1_sig g) (twopowerQ (e - 1)));
+    [ | destruct (Qlt_le_dec (twopowerQ e) (proj1_sig g))].
+    - (* Case g < 2**(e - 1) *)
+      left.
+      apply Qle_trans with (y := twopowerQ (e - 1)).
+      now apply Qlt_le_weak.
+
+      (* showing that ... *)
+      subst e.
+      unfold next_down_positive, next_down_exponent. simpl.
+      twopower_left.
+      apply kevin.
+    - (* Case 2**e < g *)
+      right.
+      apply Qle_trans with (y := twopowerQ e).
+      change (proj1_sig f) with (proj1_sig f_as_qpos).
+      apply twopower_cobinade_le.
+      subst e.
+      apply Z.le_refl.
+      apply Qlt_le_weak.
+      easy.
+    - (* Case 2^(e-1) <= g <= 2^e. *)
+      (* Either g/2^exp <= f/2^exp - 1, or g/2^exp >= f/2^exp. *)
+      destruct (Zle_ge_pred
+                  (ceiling (proj1_sig g / twopowerQ next_down_exponent))
+                  (ceiling (proj1_sig f / twopowerQ next_down_exponent))).
+      + left.
+        unfold float_le, next_down_positive, next_down_significand. simpl.
+        twopower_left.
+        now apply ceiling_spec.
+      + right.
+        unfold float_le.
+        scale_by (/ twopowerQ next_down_exponent).
+        apply Qinv_lt_0_compat, twopowerQ_positive.
+        change (proj1_sig g * / twopowerQ next_down_exponent)
+        with (proj1_sig g / twopowerQ next_down_exponent).
+        change (proj1_sig f * / twopowerQ next_down_exponent)
+        with (proj1_sig f / twopowerQ next_down_exponent).
+        setoid_replace (proj1_sig g / twopowerQ next_down_exponent)
+        with (inject_Z (ceiling (proj1_sig g / twopowerQ next_down_exponent))).
+        setoid_replace (proj1_sig f / twopowerQ next_down_exponent)
+        with (inject_Z (ceiling (proj1_sig f / twopowerQ next_down_exponent))).
+        now rewrite <- Zle_Qle.
+        symmetry.
+        apply ceiling_integer.
+        apply _next_down_significand_is_integer.
+        symmetry.
+        apply ceiling_integer.
+
+        apply large_representable_is_integer with (p := p).
+        apply scaled_representable_is_representable_div.
+        now destruct g.
+        unfold next_down_exponent.
+        twopower_left.
+        unfold e in q0.
+        rewrite Qabs_pos.
+        easy.
+        apply Qle_trans with (y := twopowerQ (e - 1)).
+        apply Qlt_le_weak.
+        apply twopowerQ_positive.
+        easy.
+  Qed.
+
+  End NextDownPositive.
+
+End NextUpNextDownPositive.
 
 (* We need a function to decompose a nonzero float into its exponent
    and significand, as integers. *)
