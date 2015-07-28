@@ -34,6 +34,10 @@ Ltac twopower_r_to_l :=
                                    with (1 := twopowerQ_positive _)
   | [ |- _ <= _ * twopowerQ _ ] => apply Qdiv_le_mult
                                    with (1 := twopowerQ_positive _)
+  | [ |- _ < _ / twopowerQ _ ] => apply Qmult_lt_div
+                                   with (1 := twopowerQ_positive _)
+  | [ |- _ < _ * twopowerQ _ ] => apply Qdiv_lt_mult
+                                   with (1 := twopowerQ_positive _)
   end.
 
 Ltac twopower_prepare :=
