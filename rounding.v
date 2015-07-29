@@ -292,7 +292,7 @@ Qed.
 
 Lemma round_toward_negative_discontinuities p (x y : Q) :
   x <= y  ->
-  (round_toward_negative p x <> round_toward_negative p y)%float ->
+  ~(round_toward_negative p x == round_toward_negative p y)%float ->
   exists (z : binary_float p), x <= proj1_sig z <= y.
 Proof.
   intros; exists (round_toward_negative p y); split.
@@ -305,7 +305,7 @@ Qed.
 
 Lemma round_toward_positive_discontinuities p (x y : Q) :
   x <= y ->
-  (round_toward_positive p x  <>  round_toward_positive p y)%float ->
+  ~(round_toward_positive p x  ==  round_toward_positive p y)%float ->
   exists (z : binary_float p), x <= proj1_sig z <= y.
 Proof.
   intros H H0; exists (round_toward_positive p x); split.
