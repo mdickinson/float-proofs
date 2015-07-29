@@ -175,7 +175,6 @@ Infix "<=" := float_le : float_scope.
 Infix "==" := float_eq : float_scope.
 Notation "0" := (zero_float _) : float_scope.
 Notation "- x" := (float_opp x) : float_scope.
-Notation "x <> y" := (~ (float_eq x y)) : float_scope.
 
 Local Open Scope float.
 
