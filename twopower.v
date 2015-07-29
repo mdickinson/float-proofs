@@ -413,6 +413,11 @@ Proof.
   apply Qnot_eq_sym, Qlt_not_eq, twopowerQ_positive.
 Qed.
 
+Lemma twopowerQ_nonnegative n : 0 <= twopowerQ n.
+Proof.
+  apply Qlt_le_weak, twopowerQ_positive.
+Qed.
+
 Lemma Qabs_twopower (x : Z) : Qabs (twopowerQ x) == twopowerQ x.
 Proof.
   apply Qabs_pos, Qlt_le_weak, twopowerQ_positive.
