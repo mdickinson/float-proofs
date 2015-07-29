@@ -107,6 +107,7 @@ Ltac twopower_cleanup :=
           rewrite Qmult_1_r
       | [ |- 0 * twopowerQ _ <= _ ] => rewrite Qmult_0_l
       | [ |- _ <= 0 * twopowerQ _ ] => rewrite Qmult_0_l
+      | [ |- 0 / twopowerQ _ < _ ] => unfold Qdiv; rewrite Qmult_0_l
       end.
 
 
