@@ -23,7 +23,6 @@ Qed.
 
 Local Open Scope Q.
 
-Notation "x <> y" := (~ (x == y)) : Q_scope.
 Notation "x <= y < z" := (x <= y /\ y < z) : Q_scope.
 Notation "x < y <= z" := (x < y /\ y <= z) : Q_scope.
 Notation "x < y < z" := (x < y /\ y < z) : Q_scope.
