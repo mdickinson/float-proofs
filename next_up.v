@@ -54,8 +54,6 @@ Proof.
   apply Qlt_trans.
 Qed.
 
-Set Implicit Arguments.
-
 (* Let's begin by defining next_up and next_down for positive floats,
    and showing their properties. *)
 
@@ -351,49 +349,127 @@ Section NextUpNextDown.
     intro; now apply Qnot_eq_sym, Qlt_not_eq.
   Qed.
 
+  Lemma float_negative_implies_nonzero p (f : binary_float p) :
+    f < 0  ->  ~(f == 0).
+  Proof.
+    intro; now apply Qlt_not_eq.
+  Qed.
+
+  Lemma float_negative_nonzero_is_nonzero p (f : binary_float p) :
+    ~(f == 0) -> ~(-f == 0).
+  Proof.
+    unfold float_eq; destruct f; simpl; intro H; contradict H; rearrange.
+  Qed.
+
   Variable p : positive.
 
-  (* First we define a function that decides whether each nonzero
-     float is positive or negative. *)
+  Let nonzero_float := { x : binary_float p | ~(x == 0) }.
 
-  Definition float_pos_neg_dec (f : { x : binary_float p | ~(x == 0)}) :
-    { 0 < proj1_sig f } + { 0 < - proj1_sig f }.
+  Definition float_is_positive (f : nonzero_float) :
+    { 0 < proj1_sig f } + { proj1_sig f < 0 }.
   Proof.
-    unfold float_lt; destruct f as [[q q_representable] x_nonzero]; simpl.
-    unfold float_eq in x_nonzero. simpl in x_nonzero.
-    destruct (Q_dec 0 q) as [[q1 | q2] | q3].
-    - (* Case 0 < q *)
-      now left.
-    - (* Case q < 0 *)
-      right; rearrange.
-    - (* Case 0 == q *)
-      contradict x_nonzero; now symmetry.
+    unfold float_lt; destruct f as [[q q_representable] x_nonzero];
+    unfold float_eq in x_nonzero; destruct (Q_dec 0 q) as [[q1 | q2] | q3];
+    [ left | right | contradict x_nonzero; symmetry]; easy.
   Defined.
 
-  Definition next_up (f : { x : binary_float p | ~(x == 0) }) :
-    { x : binary_float p | ~(x == 0) }.
+  Notation "[ e ]" := (exist _ e _).
+
+  Definition next_up (f : nonzero_float) :
+    nonzero_float.
   Proof.
-    destruct (float_pos_neg_dec f) as [f_positive | f_negative].
-    - (* Case where f positive *)
-      refine (exist _ (next_up_positive f_positive) _).
-      (* Need to show that next_up_positive f_positive is nonzero. *)
-      apply float_positive_implies_nonzero.
-      apply next_up_positive_positive.
-    - (* Case where f negative *)
-      refine (exist _ (- (next_down_positive f_negative)) _).
-      (* Need to show that next_down_positive f_positive is nonzero. *)
-      assert (0 < next_down_positive f_negative) by
-          (apply next_down_positive_positive).
-      (* Now we have 0 < *, want to show that ~ (- * == 0).
-         Note that we're still working in float. *)
-      revert H.
-      generalize (next_down_positive f_negative); intro.
-      unfold float_lt, float_eq. simpl.
-      generalize (proj1_sig b). intro.
-      intro. intro.
-      assert (q == 0)%Q by rearrange.
-      rewrite H1 in H.
-      easy.
+    refine
+      (
+        if float_is_positive f
+        then [next_up_positive _ (proj1_sig f) _ ]
+        else [- (next_down_positive _ (-proj1_sig f) _)]
+      ).
+    - apply float_positive_implies_nonzero, next_up_positive_positive.
+    - apply float_negative_nonzero_is_nonzero, float_positive_implies_nonzero,
+      next_down_positive_positive.
+    Grab Existential Variables.
+    unfold float_lt in *. simpl in *. rearrange.
+    easy.
   Defined.
+
+  Lemma float_lt_neg_flip (f g : binary_float p) : f < -g  <->  g < -f.
+  Proof.
+    unfold float_lt; destruct f, g; simpl; split; intro; rearrange.
+  Qed.
+
+  Lemma float_neg_lt_flip (f g : binary_float p) : -f < g  <->  -g < f.
+  Proof.
+    unfold float_lt; destruct f, g; simpl; split; intro; rearrange.
+  Qed.
+
+  Lemma float_le_neg_flip (f g : binary_float p) : f <= -g  <->  g <= -f.
+  Proof.
+    unfold float_le; destruct f, g; simpl; split; intro; rearrange.
+  Qed.
+
+  Lemma float_neg_le_flip (f g : binary_float p) : -f <= g  <->  -g <= f.
+  Proof.
+    unfold float_le; destruct f, g; simpl; split; intro; rearrange.
+  Qed.
+
+  Lemma lt_next_up (f : nonzero_float) :
+    proj1_sig f < proj1_sig (next_up f).
+  Proof.
+    unfold next_up.
+    destruct (float_is_positive f).
+    - apply lt_next_up_positive.
+    - simpl.
+      (* want to rearrange a < -b to b < -a *)
+      apply float_lt_neg_flip.
+      apply lt_next_down_positive.
+  Qed.
+
+  Theorem next_up_spec (f g : nonzero_float) :
+    proj1_sig (next_up f) <= proj1_sig g  <->  proj1_sig f < proj1_sig g.
+  Proof.
+    split; intro.
+    - apply float_lt_le_trans with (y := proj1_sig (next_up f)).
+      + apply lt_next_up.
+      + easy.
+    - unfold next_up; destruct (float_is_positive f).
+      + destruct (next_up_positive_is_next_up p (proj1_sig f) f0 (proj1_sig g)).
+        assert (proj1_sig f < proj1_sig f).
+        now apply float_lt_le_trans with (y := proj1_sig g).
+        contradict H1.
+        unfold float_lt.
+        auto with qarith.
+        easy.
+      + simpl.
+        assert (0 < -proj1_sig f) as H0.
+        apply float_lt_neg_flip.
+        easy.
+        destruct (next_down_positive_is_next_down p (- proj1_sig f) H0 (- proj1_sig g)).
+        * simpl.
+          (* Case -g <= next_down (-f) *)
+          apply float_neg_le_flip.
+          match goal with
+           | [ _ : ?lhs <= ?rhs1 |- ?lhs <= ?rhs2 ] => assert (rhs1 == rhs2)
+          end.
+          unfold float_eq. simpl.
+          repeat f_equiv.
+          setoid_rewrite <- H2.
+          easy.
+        * (* Case (-f) <= (-g) *)
+          exfalso.
+          assert (proj1_sig g <= proj1_sig f).
+          setoid_replace (proj1_sig f) with (- - proj1_sig f).
+          now apply float_le_neg_flip.
+          unfold float_eq, float_opp.
+          simpl.
+          ring.
+          assert (proj1_sig f < proj1_sig f).
+          now apply float_lt_le_trans with (y := proj1_sig g).
+          revert H3.
+          unfold float_lt.
+          generalize (proj1_sig (proj1_sig f)).
+          intro q.
+          change ((q < q)%Q -> False) with (~ (q < q)%Q).
+          auto with qarith.
+  Qed.
 
 End NextUpNextDown.
