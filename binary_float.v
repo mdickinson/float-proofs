@@ -246,6 +246,11 @@ Proof.
   apply Qle_trans with (y := proj1_sig y).
 Qed.
 
+Lemma float_lt_le_trans p (x y z : binary_float p) :
+  x < y -> y <= z -> x < z.
+Proof.
+  apply Qlt_le_trans with (y := proj1_sig y).
+Qed.
 
 Lemma float_incl_opp p (x : binary_float p) :
   (proj1_sig (- x)%float == - proj1_sig x)%Q.
