@@ -218,7 +218,8 @@ Proof.
 Qed.
 
 Add Parametric Morphism (p : positive) : (@float_le p)
-    with signature (@float_eq p) ==> (@float_eq p) ==> iff as float_le_morphism.
+    with signature (@float_eq p) ==> (@float_eq p) ==> iff
+      as float_le_morphism.
 Proof.
   unfold float_eq, float_le.
   intros.
@@ -226,6 +227,15 @@ Proof.
   rewrite H0.
   easy.
 Qed.
+
+Add Parametric Morphism (p : positive) : (@float_lt p)
+    with signature (@float_eq p) ==> (@float_eq p) ==> iff
+      as float_lt_morphism.
+Proof.
+  unfold float_eq, float_lt; intros x0 y0 H0 x1 y1 H1;
+  rewrite H0, H1; easy.
+Qed.
+
 
 Lemma float_le_antisymm p (x y : binary_float p) :
   x <= y  ->  y <= x  ->  x == y.
@@ -246,6 +256,12 @@ Proof.
   apply Qle_trans with (y := proj1_sig y).
 Qed.
 
+Lemma float_lt_trans p (x y z : binary_float p) :
+  (x < y  ->  y < z  ->  x < z)%float.
+Proof.
+  apply Qlt_trans.
+Qed.
+
 Lemma float_lt_le_trans p (x y z : binary_float p) :
   x < y -> y <= z -> x < z.
 Proof.
@@ -257,7 +273,6 @@ Lemma float_incl_opp p (x : binary_float p) :
 Proof.
   easy.
 Qed.
-
 
 Lemma le_neg_switch p (x y : binary_float p) : -x <= y <-> -y <= x.
 Proof.
