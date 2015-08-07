@@ -48,6 +48,9 @@ Ltac twopower_prepare :=
       | [ |- _ <= - (?n / twopowerQ ?e)] =>
         setoid_replace (- (n / twopowerQ e)) with ((-n) / twopowerQ e)
           by (field; apply twopowerQ_nonzero)
+      | [ |- _ < - (?n / twopowerQ ?e)] =>
+        setoid_replace (- (n / twopowerQ e)) with ((-n) / twopowerQ e)
+          by (field; apply twopowerQ_nonzero)
       | [ |- - (?n * twopowerQ ?e) <= _ ] =>
         setoid_replace (- (n * twopowerQ e)) with ((-n) * twopowerQ e) by ring
 
@@ -106,6 +109,7 @@ Ltac twopower_cleanup :=
       | [ |- _ <= _ * twopowerQ 0 ] => replace (twopowerQ 0) with 1 by easy;
           rewrite Qmult_1_r
       | [ |- 0 * twopowerQ _ <= _ ] => rewrite Qmult_0_l
+      | [ |- 0 * twopowerQ _ < _ ] => rewrite Qmult_0_l
       | [ |- _ <= 0 * twopowerQ _ ] => rewrite Qmult_0_l
       | [ |- 0 / twopowerQ _ < _ ] => unfold Qdiv; rewrite Qmult_0_l
       end.
