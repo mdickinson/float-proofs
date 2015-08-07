@@ -236,15 +236,15 @@ Qed.
 Lemma integer_le_floor (x y : Q) :
   is_integer x -> x <= y -> x <= inject_Z (floor y).
 Proof.
-  unfold is_integer; intro H; destruct H as [m H]; rewrite <- H;
-  intro; rewrite <- Zle_Qle; now apply floor_spec.
+  destruct 1 as [m H]; rewrite <- H; intro; rewrite <- Zle_Qle;
+  now apply floor_spec.
 Qed.
 
 Lemma integer_le_ceiling (x y : Q) :
   is_integer y -> x <= y -> inject_Z (ceiling x) <= y.
 Proof.
-  unfold is_integer; destruct 1 as [m H]; rewrite <- H; intro;
-  rewrite <- Zle_Qle; now apply ceiling_spec.
+  destruct 1 as [m H]; rewrite <- H; intro; rewrite <- Zle_Qle;
+  now apply ceiling_spec.
 Qed.
 
 
