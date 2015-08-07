@@ -22,7 +22,7 @@ Proof.
   - left; now apply QPos.leb_le.
   - right; intro;
     assert (x <=? y = true) by (now apply QPos.leb_le); congruence.
-Qed.
+Defined.
 
 Definition cobinade q :=
   let trial_cobinade := ('Pos.size (QPos_num q) - 'Pos.size (QPos_den q))%Z in
