@@ -53,6 +53,8 @@ Ltac twopower_prepare :=
           by (field; apply twopowerQ_nonzero)
       | [ |- - (?n * twopowerQ ?e) <= _ ] =>
         setoid_replace (- (n * twopowerQ e)) with ((-n) * twopowerQ e) by ring
+      | [ |- _ <= - (?n * twopowerQ ?e) ] =>
+        setoid_replace (- (n * twopowerQ e)) with ((-n) * twopowerQ e) by ring
 
       | [ |- Qabs (_ / twopowerQ _) <= _ ] =>
         rewrite Qabs_div, Qabs_twopowerQ; [ | apply twopowerQ_nonzero ]
@@ -62,6 +64,9 @@ Ltac twopower_prepare :=
         rewrite Qabs_div, Qabs_twopowerQ; [ | apply twopowerQ_nonzero ]
       | [ |- Qabs (_ * twopowerQ _) < _ ] =>
         rewrite Qabs_Qmult, Qabs_twopowerQ
+      | [ |- - (?n / twopowerQ ?e) < _ ] =>
+        setoid_replace (- (n / twopowerQ e)) with ((-n) / twopowerQ e)
+          by (field; apply twopowerQ_nonzero)
       end.
 
 (* Tactics to be applied post moving powers of two around. *)
@@ -72,6 +77,15 @@ Ltac twopower_collect :=
       | [ |- _ < twopowerQ _ * twopowerQ _ ] => rewrite <- twopowerQ_mul
       | [ |- _ <= twopowerQ _ / twopowerQ _ ] => rewrite <- twopowerQ_div
       | [ |- _ < twopowerQ _ / twopowerQ _ ] => rewrite <- twopowerQ_div
+      | [ |- _ == _ * twopowerQ _ / twopowerQ _] =>
+        unfold Qdiv; rewrite <- twopowerQ_inv;
+        rewrite <- Qmult_assoc; rewrite <- twopowerQ_mul
+      | [ |- _ <= _ * twopowerQ _ / twopowerQ _] =>
+        unfold Qdiv; rewrite <- twopowerQ_inv;
+        rewrite <- Qmult_assoc; rewrite <- twopowerQ_mul
+      | [ |- _ < _ * twopowerQ _ / twopowerQ _] =>
+        unfold Qdiv; rewrite <- twopowerQ_inv;
+        rewrite <- Qmult_assoc; rewrite <- twopowerQ_mul
       | [ |- twopowerQ _ / twopowerQ _ == _ ] => rewrite <- twopowerQ_div
       | [ |- twopowerQ _ / twopowerQ _ <= _ ] => rewrite <- twopowerQ_div
       | [ |- twopowerQ _ * twopowerQ _ <= _ ] => rewrite <- twopowerQ_mul
@@ -79,10 +93,10 @@ Ltac twopower_collect :=
       | [ |- _ / twopowerQ _ * twopowerQ _ <= _ ] =>
         unfold Qdiv; rewrite <- twopowerQ_inv;
         rewrite <- Qmult_assoc; rewrite <- twopowerQ_mul
-      | [ |- _ <= _ * twopowerQ _ / twopowerQ _] =>
+      | [ |- _ / twopowerQ _ * twopowerQ _ < _ ] =>
         unfold Qdiv; rewrite <- twopowerQ_inv;
         rewrite <- Qmult_assoc; rewrite <- twopowerQ_mul
-      | [ |- _ == _ * twopowerQ _ / twopowerQ _] =>
+      | [ |- _ < _ / twopowerQ _ * twopowerQ _ ] =>
         unfold Qdiv; rewrite <- twopowerQ_inv;
         rewrite <- Qmult_assoc; rewrite <- twopowerQ_mul
       end.
@@ -92,25 +106,31 @@ Ltac twopower_exponent_simplify :=
       | [ |- _ == _ * twopowerQ ?e ] => ring_simplify e
       | [ |- _ <= twopowerQ ?e ] => ring_simplify e
       | [ |- _ <= _ * twopowerQ ?e ] => ring_simplify e
+      | [ |- _ < twopowerQ ?e ] => ring_simplify e
+      | [ |- _ < _ * twopowerQ ?e ] => ring_simplify e
       | [ |- twopowerQ ?e <= _ ] => ring_simplify e
       | [ |- _ * twopowerQ ?e <= _ ] => ring_simplify e
-      | [ |- _ < twopowerQ ?e ] => ring_simplify e
       | [ |- twopowerQ ?e < _ ] => ring_simplify e
-      | [ |- _ < _ * twopowerQ ?e ] => ring_simplify e
       | [ |- _ * twopowerQ ?e < _ ] => ring_simplify e
       end.
 
 Ltac twopower_cleanup :=
   try match goal with
-      | [ |- _ * twopowerQ 0 <= _ ] => replace (twopowerQ 0) with 1 by easy;
-          rewrite Qmult_1_r
       | [ |- _ == _ * twopowerQ 0 ] => replace (twopowerQ 0) with 1 by easy;
           rewrite Qmult_1_r
       | [ |- _ <= _ * twopowerQ 0 ] => replace (twopowerQ 0) with 1 by easy;
           rewrite Qmult_1_r
+      | [ |- _ < _ * twopowerQ 0 ] => replace (twopowerQ 0) with 1 by easy;
+          rewrite Qmult_1_r
+      | [ |- _ * twopowerQ 0 <= _ ] => replace (twopowerQ 0) with 1 by easy;
+          rewrite Qmult_1_r
+      | [ |- _ * twopowerQ 0 < _ ] => replace (twopowerQ 0) with 1 by easy;
+          rewrite Qmult_1_r
+      | [ |- _ <= 0 * twopowerQ _ ] => rewrite Qmult_0_l
+      | [ |- _ < 0 * twopowerQ _ ] => rewrite Qmult_0_l
+      | [ |- _ < 0 / twopowerQ _ ] => unfold Qdiv; rewrite Qmult_0_l
       | [ |- 0 * twopowerQ _ <= _ ] => rewrite Qmult_0_l
       | [ |- 0 * twopowerQ _ < _ ] => rewrite Qmult_0_l
-      | [ |- _ <= 0 * twopowerQ _ ] => rewrite Qmult_0_l
       | [ |- 0 / twopowerQ _ < _ ] => unfold Qdiv; rewrite Qmult_0_l
       end.
 
