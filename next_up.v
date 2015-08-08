@@ -592,6 +592,11 @@ Proof.
   now exists ((-1)%Z), (0%Z).
 Defined.
 
-Eval compute in low_exponent tiny_precision_neg_one.
-Eval compute in !!(next_up tiny_precision_neg_one).
-Eval compute in !!(next_down tiny_precision_neg_one).
+Example next_up_of_neg_one :
+  (!!next_up tiny_precision_neg_one == -9007199254740991 # 9007199254740992)%Q.
+Proof. now compute. Qed.
+
+Example next_down_of_neg_one :
+  (!!next_down tiny_precision_neg_one ==
+   -4503599627370497 # 4503599627370496)%Q.
+Proof. now compute. Qed.
