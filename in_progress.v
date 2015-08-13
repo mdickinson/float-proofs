@@ -10,6 +10,7 @@ Require Import floor_and_ceiling.
 Require Import is_multiple_of.
 Require Import twopower.
 Require Import twopower_tactics.
+Require Import binade.
 Require Import binary_float.
 
 Open Scope Q.

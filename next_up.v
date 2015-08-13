@@ -8,6 +8,7 @@ Require Import floor_and_ceiling.
 Require Import qpos.
 Require Import twopower.
 Require Import twopower_tactics.
+Require Import binade.
 Require Import cobinade.
 Require Import binary_float.
 

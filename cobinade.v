@@ -56,14 +56,12 @@ Qed.
 Lemma cobinade_bound q :
   twopower (cobinade q - 1) < q <= twopower (cobinade q).
 Proof.
-  unfold cobinade; destruct (QPos_le_dec q).
-  - split.
-    + apply trial_cobinade_bound.
-    + assumption.
-  - split.
-    + apply QPos_lt_nge; now ring_simplify
-        (' Pos.size (QPos_num q) - ' Pos.size (QPos_den q) + 1 - 1)%Z.
-    + apply QPos_lt_le_weak; apply trial_cobinade_bound.
+  unfold cobinade; destruct QPos_le_dec; split.
+  - apply trial_cobinade_bound.
+  - assumption.
+  - apply QPos_lt_nge; now ring_simplify
+    (' Pos.size (QPos_num q) - ' Pos.size (QPos_den q) + 1 - 1)%Z.
+  - apply QPos_lt_le_weak; apply trial_cobinade_bound.
 Qed.
 
 

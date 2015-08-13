@@ -244,126 +244,6 @@ Proof.
   apply pos_size_le'.
 Qed.
 
-Hint Resolve QPos_lt_le_weak.
-Hint Resolve QPos_div_le_lt.
-Hint Resolve QPos_div_lt_le.
-
-Hint Immediate pos_size_le.
-Hint Immediate pos_size_lt.
-
-Lemma trial_binade_bound : forall q : QPos, 
-  let trial_binade := ('Pos.size (QPos_num q) - 'Pos.size (QPos_den q))%Z in
-  twopower (trial_binade - 1) <= q < twopower (trial_binade + 1).
-Proof.
-  intros; split;
-  setoid_replace q with (QPos_from_pos (QPos_num q) / QPos_from_pos (QPos_den q)) by (symmetry; apply num_over_den);
-  unfold trial_binade.
-
-  replace (' Pos.size (QPos_num q) - ' Pos.size (QPos_den q) - 1)%Z
-     with (' Pos.size (QPos_num q) - 1 - ' Pos.size (QPos_den q))%Z by ring.
-  rewrite twopower_div. auto.
-
-  replace (' Pos.size (QPos_num q) - ' Pos.size (QPos_den q) + 1)%Z
-     with (' Pos.size (QPos_num q) - (' Pos.size (QPos_den q) - 1))%Z by ring.
-  rewrite twopower_div. auto.
-Qed.
-
-
-Definition binade (q : QPos) : Z :=
-  let trial_binade := ('Pos.size (QPos_num q) - 'Pos.size (QPos_den q))%Z in
-  if q <? twopower trial_binade then (trial_binade - 1)%Z else trial_binade.
-
-
-Lemma binade_bound : forall q : QPos,
-  twopower (binade q) <= q < twopower (binade q + 1).
-Proof.
-  intro q.
-  unfold binade.
-  remember ('Pos.size (QPos_num q) - 'Pos.size (QPos_den q))%Z as trial_binade.
-  case_eq (q <? twopower trial_binade).
-
-  split.
-  rewrite Heqtrial_binade. apply trial_binade_bound.
-  replace (trial_binade - 1 + 1)%Z with trial_binade by ring.
-  now apply QPos.ltb_lt.
-
-  split.
-  now apply QPos_ltb_le.
-  rewrite Heqtrial_binade. apply trial_binade_bound.
-Qed.
-
-Lemma twopower_binade_contrapos n q : (binade q < n)%Z  ->  q < twopower n.
-Proof.
-  intros.
-  apply Zlt_le_succ in H; unfold Z.succ in H.
-  apply QPos_lt_le_trans with (b := twopower (binade q + 1)).
-    apply binade_bound.
-    now apply twopower_monotonic_le.
-Qed.
-
-(* Now the main theorem that effectively acts as a specification for binade. *)
-
-Theorem twopower_binade_le n q : twopower n <= q  <->  (n <= binade q)%Z.
-Proof.
-  split; intro.
-
-  (* First direction: showing that twopower n <= q  ->  n <= binade q. *)
-  apply Z.le_ngt.
-  contradict H.
-  apply QPos_lt_nge.
-  now apply twopower_binade_contrapos.
-
-  (* Second direction: showing that n <= binade q  implies twopower n <= q. *)
-  apply QPos_le_trans with (b := twopower (binade q)).
-  now apply twopower_monotonic_le.
-  apply binade_bound.
-Qed.
-
-(* With this in hand, we can finally prove that binade is well-defined. *)
-
-Add Morphism binade : binade_morphism.
-Proof.
-  intros x y x_eq_y; apply Z.le_antisymm; apply twopower_binade_le;
-  [rewrite <- x_eq_y | rewrite x_eq_y ]; apply twopower_binade_le; apply Z.le_refl.
-Qed.
-
-(* We can also use the injectivity of twopower to show that
-   binade (twopower n) = n. *)
-
-Theorem binade_twopower_eq n : (binade (twopower n) = n)%Z.
-Proof.
-  apply twopower_injective.
-  apply QPos_le_antisymm.
-  apply twopower_binade_le. auto with zarith.
-  apply twopower_monotonic_le.
-  apply twopower_binade_le.
-  apply QPos_le_refl.
-Qed.
-
-
-Theorem binade_monotonic q r : q <= r  -> (binade q <= binade r)%Z.
-Proof.
-  intro q_le_r. apply twopower_binade_le.
-  apply QPos_le_trans with (b := q).
-  apply binade_bound. easy.
-Qed.
-
-(* Alternative form of the specification. *)
-
-Theorem twopower_binade_lt n q : q < twopower n  <->  (binade q < n)%Z.
-Proof.
-  rewrite Z.lt_nge.
-  rewrite QPos_lt_nge.
-  split; intro H; contradict H; now apply twopower_binade_le.
-Qed.
-
-(* Relationship with multiplication. *)
-
-Theorem binade_one : (binade (1%QPos) = 0)%Z.
-Proof.
-  easy.
-Qed.
-
 Lemma mul_le p q r s : p <= q -> r <= s -> p*r <= q * s.
 Proof.
   intros; apply QPos_le_trans with (b := q * r);
@@ -376,28 +256,7 @@ Proof.
   [apply QPos.mul_lt_mono_r | apply QPos.mul_lt_mono_l ]; easy.
 Qed.
 
-Theorem binade_mul x y :
-  (binade x + binade y <= binade (x * y)%QPos <= binade x + binade y + 1)%Z.
-Proof.
-  split;
-  [
-  apply twopower_binade_le; rewrite twopower_mul; apply mul_le
-  |
-  apply Zlt_succ_le; apply twopower_binade_lt;
-  replace (Z.succ (binade x + binade y + 1)) with
-  ((binade x + 1) + (binade y + 1))%Z by omega; rewrite twopower_mul;
-    apply mul_lt
-  ]; apply binade_bound.
-Qed.
-
-Theorem binade_div x y :
-  (binade x - binade y - 1 <= binade (x / y)%QPos <= binade x - binade y)%Z.
-Proof.
-  remember (x / y) as z; setoid_replace x with (x / y * y) by (symmetry;
-  apply QPos_div_mul); rewrite <- Heqz; pose proof (binade_mul z y); omega.
-Qed.
-
-(* Versions of twopower and binade for the rationals. *)
+(* Versions of twopower for the rationals. *)
 
 Local Open Scope Q.
 
@@ -470,46 +329,6 @@ Proof.
   rewrite <- Qpower.Zpower_Qpower; [ apply is_integer_inject_Z | easy ].
 Qed.
 
-(* We define binadeQ for all nonzero numbers. *)
-
-Definition binadeQ x (x_nonzero : ~(x == 0)) : Z :=
-  binade (exist _ (Qabs x) (Qabs_nonzero x x_nonzero)).
-
-(* Relationships between twopower and binade. *)
-
-Lemma twopowerQ_binadeQ_lt n q (q_nonzero : ~(q == 0)) :
-  Qabs q < twopowerQ n  <->  (binadeQ q q_nonzero < n)%Z.
-Proof.
-  unfold twopowerQ, binadeQ; now rewrite <- twopower_binade_lt.
-Qed.
-
-Lemma twopowerQ_binadeQ_le n q (q_nonzero : ~(q == 0)) :
-  twopowerQ n <= Qabs q  <->  (n <= binadeQ q q_nonzero)%Z.
-Proof.
-  unfold twopowerQ, binadeQ; now rewrite <- twopower_binade_le.
-Qed.
-
-Lemma binadeQ_monotonic x (x_nonzero : ~(x == 0)) y (y_nonzero : ~(y == 0)) :
-  Qabs x <= Qabs y  ->  (binadeQ x x_nonzero <= binadeQ y y_nonzero)%Z.
-Proof.
-  intro; unfold binadeQ; now apply binade_monotonic.
-Qed.
-
-Lemma binadeQ_equiv x (x_nonzero : ~(x == 0)) y (y_nonzero : ~(y == 0)) :
-  x == y  ->  binadeQ x x_nonzero = binadeQ y y_nonzero.
-Proof.
-  intro H; unfold binadeQ; apply binade_morphism.
-  unfold QPos.eq. simpl. now rewrite H.
-Qed.
-
-Lemma binadeQ_opp x (x_nonzero : ~(x == 0)) (neg_x_nonzero : ~(-x == 0)) :
-  binadeQ x x_nonzero = binadeQ (-x) neg_x_nonzero.
-Proof.
-  unfold binadeQ; apply binade_morphism.
-  unfold QPos.eq. setoid_replace (Qabs (-x)) with (Qabs x).
-  reflexivity.
-  apply Qabs_opp.
-Qed.
 
 Lemma Qabs_twopowerQ n :
   Qabs (twopowerQ n) == twopowerQ n.
