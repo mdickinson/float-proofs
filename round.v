@@ -220,3 +220,22 @@ Lemma Qabs_round_le x y :
 Proof.
   destruct_round; (apply Qabs_floor_le || apply Qabs_ceiling_le).
 Qed.
+
+Theorem floor_le_round (q : Q) : (floor q <= round q)%Z.
+Proof.
+  rewrite Zle_Qle;
+  rearrange_goal (q - inject_Z (round q) <= q - inject_Z (floor q));
+  rewrite <- (Qabs_pos (q - inject_Z (floor q))).
+  - apply Qle_trans with (1 := Qle_Qabs _), round_as_close_as_floor.
+  - rearrange_goal (inject_Z (floor q) <= q);
+    apply floor_spec, Zle_refl.
+Qed.
+
+Theorem round_le_ceiling (q : Q) : (round q <= ceiling q)%Z.
+Proof.
+  rewrite Zle_Qle;
+  rearrange_goal (- (q - inject_Z (round q)) <= - (q - inject_Z (ceiling q)));
+  rewrite <- (Qabs_neg (q - inject_Z (ceiling q))).
+  - apply Qle_trans with (1 := Qle_Qabs_neg _), round_as_close_as_ceiling.
+  - rearrange_goal (q <= inject_Z (ceiling q)); apply ceiling_spec, Z.le_refl.
+Qed.
