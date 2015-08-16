@@ -253,7 +253,7 @@ Qed.
 Lemma float_le_trans p (x y z : binary_float p) :
   x <= y -> y <= z -> x <= z.
 Proof.
-  apply Qle_trans with (y := proj1_sig y).
+  apply Qle_trans.
 Qed.
 
 Lemma float_lt_trans p (x y z : binary_float p) :
@@ -265,7 +265,13 @@ Qed.
 Lemma float_lt_le_trans p (x y z : binary_float p) :
   x < y -> y <= z -> x < z.
 Proof.
-  apply Qlt_le_trans with (y := proj1_sig y).
+  apply Qlt_le_trans.
+Qed.
+
+Lemma float_le_lt_trans p (x y z : binary_float p) :
+  x <= y -> y < z -> x < z.
+Proof.
+  apply Qle_lt_trans.
 Qed.
 
 Lemma float_incl_opp p (x : binary_float p) :
