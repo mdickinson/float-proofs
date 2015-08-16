@@ -17,6 +17,7 @@ Require Import twopower.
 Require Import twopower_tactics.
 Require Import binade.
 Require Import binary_float.
+Require Import next_up.
 
 Local Open Scope Q.
 
@@ -178,6 +179,20 @@ Add Parametric Morphism (p : positive) : (round_toward_positive p)
     with signature Qeq ==> (@float_eq p) as round_toward_positive_morphism.
 Proof.
   intros; unfold round_toward_positive, float_eq;
+  destruct (Qeq_dec x 0), (Qeq_dec y 0).
+  - easy.
+  - contradict n. now rewrite <- H.
+  - contradict n. now rewrite H.
+  - simpl.
+    assert (binadeQ y n0 = binadeQ x n)%Z by (now apply binadeQ_equiv).
+    rewrite H0.
+    now setoid_rewrite <- H.
+Qed.
+
+Add Parametric Morphism p : (round_ties_to_even p)
+    with signature Qeq ==> float_eq (p := p) as round_ties_to_even_morphism.
+Proof.
+  intros x y H; unfold round_ties_to_even, float_eq;
   destruct (Qeq_dec x 0), (Qeq_dec y 0).
   - easy.
   - contradict n. now rewrite <- H.
@@ -437,3 +452,354 @@ Qed.
    in precision p, (f + next_up(f)) / 2 is representable in precision
    p + 1, and similarly for next_down.
 *)
+
+Lemma round_toward_negative_le_round_ties_to_even p x :
+  (round_toward_negative p x <= round_ties_to_even p x)%float.
+Proof.
+  unfold float_le.
+  rearrange_goal (x - !round_ties_to_even p x <= x - !round_toward_negative p x).
+  rewrite <- (Qabs_pos (x - !round_toward_negative p x)).
+  apply Qle_trans with (y := Qabs (x - !round_ties_to_even p x)).
+  apply Qle_Qabs.
+  apply round_ties_to_even_nearest.
+  rearrange_goal (!round_toward_negative p x <= x).
+  apply round_toward_negative_spec.
+  apply float_le_refl.
+Qed.
+
+Lemma round_ties_to_even_le_round_toward_positive p x :
+  (round_ties_to_even p x <= round_toward_positive p x)%float.
+Proof.
+  unfold float_le.
+  rearrange_goal (-(x - !round_ties_to_even p x) <= - (x - !round_toward_positive p x)).
+  rewrite <- (Qabs_neg (x - !round_toward_positive p x)).
+  apply Qle_trans with (y := Qabs (x - !round_ties_to_even p x)).
+  apply Qle_Qabs_neg.
+  apply round_ties_to_even_nearest.
+  rearrange_goal (x <= !round_toward_positive p x).
+  apply round_toward_positive_spec.
+  apply float_le_refl.
+Qed.
+
+Lemma round_toward_negative_for_positive p x :
+  0 < x  ->  (0 < round_toward_negative p x)%float.
+Proof.
+  intro.
+  unfold round_toward_negative.
+  destruct (Qeq_dec x 0); unfold float_lt.
+  - now rewrite <- q at 2.
+  - unfold float_from_significand_and_exponent; simpl;
+    apply qpos.Q_mul_pos_pos with (2 := twopowerQ_positive _).
+    apply Qlt_le_trans with (y := twopowerQ ('p - 1)).
+    apply twopowerQ_positive.
+    apply integer_le_floor.
+    apply is_integer_twopowerQ.
+    assert (0 < 'p)%Z by easy; omega.
+    twopower_left.
+    setoid_replace x with (Qabs x) at 2.
+    apply (twopowerQ_binadeQ_le (binadeQ x n) x n), Z.le_refl.
+    rewrite Qabs_pos. easy. apply Qlt_le_weak. easy.
+Qed.
+
+
+Lemma round_toward_positive_for_negative p x :
+  x < 0  ->  (round_toward_positive p x < 0)%float.
+Proof.
+  intro; unfold round_toward_positive.
+  destruct (Qeq_dec x 0); unfold float_lt.
+  - now rewrite <- q at 1.
+  - unfold float_from_significand_and_exponent; simpl.
+    twopower_right.
+    apply Qle_lt_trans with (y := -twopowerQ ('p - 1)).
+    apply integer_le_ceiling.
+    apply is_integer_neg.
+    apply is_integer_twopowerQ.
+    assert (0 < 'p)%Z by easy; omega.
+    apply Qdiv_le_mult.
+    apply twopowerQ_positive.
+    match goal with
+    | [ |- _ <= - ?a * ?b ] =>
+      setoid_replace (- a * b) with (- (a * b)) by ring
+    end.
+    apply le_neg_switch_r.
+    twopower_collect.
+    twopower_exponent_simplify.
+    rewrite <- Qabs_neg.
+    eapply twopowerQ_binadeQ_le, Zle_refl.
+    now apply Qlt_le_weak.
+    rearrange_goal (0 < twopowerQ ('p - 1)).
+    apply twopowerQ_positive.
+Qed.
+
+Lemma round_ties_to_even_for_positive p x :
+  (0 < x)  ->  (0 < round_ties_to_even p x)%float.
+Proof.
+  intro; apply float_lt_le_trans with (y := round_toward_negative p x).
+  - now apply round_toward_negative_for_positive.
+  - apply round_toward_negative_le_round_ties_to_even.
+Qed.
+
+Lemma round_ties_to_even_for_negative p x :
+  x < 0  ->  (round_ties_to_even p x < 0)%float.
+Proof.
+  intro; apply float_le_lt_trans with (y := round_toward_positive p x).
+  - apply round_ties_to_even_le_round_toward_positive.
+  - now apply round_toward_positive_for_negative.
+Qed.
+
+Lemma round_ties_to_even_for_nonzero p x :
+  ~(x == 0) -> ~(round_ties_to_even p x == 0)%float.
+Proof.
+  intro x_nonzero.
+  case (Qlt_gt_cases _ _ x_nonzero); intro.
+  - now apply Qlt_not_eq, round_ties_to_even_for_negative.
+  - now apply Qnot_eq_sym, Qlt_not_eq, round_ties_to_even_for_positive.
+Qed.
+
+Lemma round_toward_negative_for_nonzero p x :
+  ~(x == 0) -> ~(round_toward_negative p x == 0)%float.
+Proof.
+  intro x_nonzero.
+  case (Qlt_gt_cases _ _ x_nonzero); intro.
+  - apply Qlt_not_eq.
+    eapply Qle_lt_trans.
+    apply round_toward_negative_spec.
+    apply float_le_refl.
+    easy.
+  - now apply Qnot_eq_sym, Qlt_not_eq, round_toward_negative_for_positive.
+Qed.
+
+(* To show that x <= (round x + next_up (round x)) / 2 :
+   This is equivalent to showing that
+
+      2 * x <= round x + next_up (round x)
+
+   or that
+
+      x - round(x) <= next_up (round x) - x
+
+   But this follows from the fact that round x is the closest
+   float to x, on showing that next_up (round x) - x is nonnegative.
+   That is, we must show that
+
+       x <= next_up (round x)
+
+   And this follows from
+
+       x <= next_up (round_down x) <= next_up (round x)
+
+   where the second inequality is clear, and the first inequality
+   is equivalent to round_down x <= next_up (round_down x) by the
+   specification of round_down.
+
+ *)
+
+(* x < !f iff round_down x < f *)
+(* !f <= x iff !f <= round_down x. *)
+
+
+Definition round_toward_negative_nz p x (x_nonzero : ~(x == 0)) : nonzero_float p.
+Proof.
+  refine [round_toward_negative p x].
+  now apply round_toward_negative_for_nonzero.
+Defined.
+
+Definition round_toward_positive_nz p x (x_nonzero : ~(x == 0)) : nonzero_float p.
+Proof.
+  refine [round_toward_positive p x].
+  case (Qlt_gt_cases _ _ x_nonzero); intro H.
+  - now apply Qlt_not_eq, round_toward_positive_for_negative.
+  - apply Qnot_eq_sym, Qlt_not_eq, Qlt_le_trans with (1 := H),
+    round_toward_positive_spec, float_le_refl.
+Defined.
+
+Definition round_ties_to_even_nz p x (x_nonzero : ~(x == 0)) : nonzero_float p.
+Proof.
+  refine [round_ties_to_even p x]; now apply round_ties_to_even_for_nonzero.
+Defined.
+
+
+Lemma x_le_next_up_round_x p x x_nonzero :
+  x < !!next_up (round_ties_to_even_nz p x x_nonzero).
+Proof.
+  apply round_toward_negative_spec_lt;
+  change (round_toward_negative p x)
+  with (!round_toward_negative_nz p x x_nonzero);
+  apply next_up_spec_alt, round_toward_negative_le_round_ties_to_even.
+Qed.
+
+(* Now we want to show that for any nonzero x,
+   x <= (round x + next_up (round x)) / 2. *)
+
+Definition next_tie_up p x x_nonzero : Q :=
+  let f := round_ties_to_even_nz p x x_nonzero in
+  (!!f + !!next_up f) / 2.
+
+
+Theorem ties_representable p (f : nonzero_float p) :
+  representable (p + 1) ((!!f + !!next_up f) / 2).
+Proof.
+  unfold next_up. unfold float_from_significand_and_exponent.
+  rewrite <- reconstruct_float.
+  simpl.
+  rewrite <- Qmult_plus_distr_l.
+  change 2 with (twopowerQ 1).
+  apply scaled_representable_is_representable_div.
+  apply scaled_representable_is_representable.
+  rewrite <- inject_Z_plus.
+  apply small_integers_are_representable.
+  pose proof (low_significand_bound f).
+  destruct (float_by_sign f); unfold low_significand;
+  repeat (rewrite inject_Z_plus);
+  setoid_replace (inject_Z (floor (low_significand_Q f)))
+  with (low_significand_Q f)
+    by (apply floor_integer, low_significand_is_integer);
+  rewrite Pos2Z.inj_add.
+  - rewrite Qabs_pos.
+    + apply Qlt_le_succ.
+      * repeat apply is_integer_add;
+        (apply low_significand_is_integer || apply is_integer_inject_Z).
+      * now apply is_integer_twopowerQ.
+      * rearrange_goal
+          ((low_significand_Q f + 1) * 2 <= twopowerQ (' p + 1)).
+        (* Should make this change part of twopower_prepare. *)
+        change 2 with (twopowerQ 1).
+        twopower_right.
+        apply Qlt_le_succ.
+        apply low_significand_is_integer.
+        now apply is_integer_twopowerQ.
+        easy.
+    + assert (0 <= low_significand_Q f) by
+          (eapply Qle_trans; [ apply twopowerQ_nonnegative | apply H]).
+      repeat (change 0 with (0 + 0); apply Qplus_le_compat; try easy).
+  - rewrite Qabs_neg.
+    + apply Qlt_le_succ.
+      * apply is_integer_neg; repeat apply is_integer_add;
+        (apply low_significand_is_integer || apply is_integer_inject_Z).
+      * now apply is_integer_twopowerQ.
+      * rearrange_goal
+          (- twopowerQ (' p + 1) <= low_significand_Q f * 2).
+        change 2 with (twopowerQ 1).
+        apply remedial.le_neg_switch.
+        twopower_right.
+        apply remedial.le_neg_switch.
+        easy.
+    + rearrange_goal (2 * low_significand_Q f + 1 <= 0).
+      apply Qlt_le_succ.
+      apply is_integer_mul.
+      apply is_integer_inject_Z.
+      apply low_significand_is_integer.
+      apply is_integer_inject_Z.
+      scale_by (/ 2).
+      easy.
+      rearrange_goal (low_significand_Q f < 0).
+      eapply Qlt_trans.
+      apply H.
+      rearrange_goal (0 < twopowerQ ('p - 1)).
+      apply twopowerQ_positive.
+Qed.
+
+Lemma le_next_tie_up p x x_nonzero : x <= next_tie_up p x x_nonzero.
+Proof.
+  unfold next_tie_up.
+  set (f := round_ties_to_even_nz p x x_nonzero).
+  scale_by 2. now compute.
+  rearrange_goal (x - !!f <= !!next_up f - x).
+  apply Qle_trans with (y := Qabs (x - !!f)).
+  apply Qle_Qabs.
+  setoid_replace (!!next_up f - x) with (Qabs (x - !!next_up f)).
+  apply round_ties_to_even_nearest.
+  rewrite Qabs_neg.
+  rearrange.
+  rearrange_goal (x <= !!next_up f).
+  unfold f.
+  apply Qlt_le_weak.
+  apply x_le_next_up_round_x.
+Qed.
+
+Definition next_tie_down p x x_nonzero : Q :=
+  let f := round_ties_to_even_nz p x x_nonzero in
+  (!!next_down f + !!f) / 2.
+
+Lemma next_tie_down_le p x x_nonzero : next_tie_down p x x_nonzero <= x.
+Proof.
+  unfold next_tie_down.
+  set (f := round_ties_to_even_nz p x x_nonzero).
+  scale_by 2. now compute.
+  rearrange_goal (-(x - !!f) <= x - !!next_down f).
+  apply Qle_trans with (y := Qabs (x - !!f)).
+  apply Qle_Qabs_neg.
+  setoid_replace (x - !!next_down f) with (Qabs (x - !!next_down f)).
+  apply round_ties_to_even_nearest.
+  rewrite Qabs_pos. easy.
+  rearrange_goal (!!next_down f <= x).
+  apply Qlt_le_weak.
+  apply round_toward_positive_spec_lt.
+  change (round_toward_positive p x)
+  with (!round_toward_positive_nz p x x_nonzero).
+  apply next_down_spec_alt, round_ties_to_even_le_round_toward_positive.
+Qed.
+
+Theorem round_ties_to_even_jumps p x y :
+  (round_ties_to_even p x < round_ties_to_even p y)%float ->
+  exists h, (representable (p + 1) h /\ x <= h <= y).
+Proof.
+  (* Divide into cases x zero, x nonzero, and similarly for y. *)
+  intro; destruct (Qeq_dec x 0) as [x_zero | x_nonzero];
+  destruct (Qeq_dec y 0) as [y_zero | y_nonzero].
+  - (* Case x == y == 0. Here round_ties_to_even p x < round_ties_to_even p y
+       gives a contradiction. *)
+    setoid_rewrite x_zero in H.
+    setoid_rewrite y_zero in H.
+    now compute in H.
+  - (* Case x == 0, y != 0 *)
+    assert (round_ties_to_even p x == 0)%float
+      by (rewrite x_zero; now compute); rewrite H0 in H.
+    exists (next_tie_down p y y_nonzero).
+    split.
+    + unfold next_tie_down; generalize (round_ties_to_even_nz p y y_nonzero);
+      intro; setoid_rewrite <- next_up_next_down at 2;
+      apply ties_representable.
+    + split.
+      * rewrite x_zero.
+        unfold next_tie_down.
+        apply Qmult_le_div.
+        easy.
+        change (0 * 2) with (0 + 0).
+        apply Qplus_le_compat; apply Qlt_le_weak.
+        change 0 with (! (zero_float p)).
+        apply next_down_positive.
+        easy.
+        easy.
+      * apply next_tie_down_le.
+  - (* Case x != 0, y == 0 *)
+    assert (round_ties_to_even p y == 0)%float
+      by (rewrite y_zero; now compute); rewrite H0 in H.
+    exists (next_tie_up p x x_nonzero).
+    rewrite y_zero. clear H0 y_zero.
+    split.
+    + apply ties_representable.
+    + split.
+      * apply le_next_tie_up.
+      * unfold next_tie_up.
+        apply Qdiv_le_mult; try easy.
+        change (0 * 2) with (0 + 0).
+        apply Qplus_le_compat; apply Qlt_le_weak;
+        now try apply next_up_negative.
+  - (* Final case: x, y both nonzero. *)
+    exists (next_tie_up p x x_nonzero).
+    split.
+    + apply ties_representable.
+    + split.
+      * apply le_next_tie_up.
+      * apply Qle_trans with (y := next_tie_down p y y_nonzero).
+        unfold next_tie_up, next_tie_down.
+        apply Qmult_le_r.
+        easy.
+        apply Qplus_le_compat.
+        apply next_down_spec.
+        easy.
+        apply next_up_spec.
+        easy.
+        apply next_tie_down_le.
+Qed.
