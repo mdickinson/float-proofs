@@ -636,6 +636,44 @@ Definition next_tie_up p x x_nonzero : Q :=
   (!!f + !!next_up f) / 2.
 
 
+Lemma in_between_not_representable p (f : nonzero_float p) x :
+  !!f < x < !!next_up f  ->  ~ representable p x.
+Proof.
+  destruct 1 as [lower upper].
+  - intro.
+    set (x_as_float := (exist _ x H : binary_float p)).
+    assert (~(x_as_float == 0))%float.
+    + pose proof (float_by_sign_spec f); destruct (float_by_sign f).
+      apply Qnot_eq_sym, Qlt_not_eq.
+      apply float_lt_trans with (y := !f).
+      unfold float_lt; rewrite H0; now destruct q.
+      easy.
+      apply Qlt_not_eq.
+      apply float_lt_trans with (y := !next_up f).
+      easy.
+      apply next_up_negative.
+      unfold float_lt; rewrite H0.
+      change (!0%float) with 0.
+      rearrange_goal (0 < !q).
+      now destruct q.
+    + set (x_as_nonzero := ((exist _ x_as_float H0) : nonzero_float p)).
+      assert (!x_as_nonzero <= !f)%float by (now apply next_up_spec_alt).
+      assert (!f < !x_as_nonzero)%float by easy.
+      (* Now we have two contradictory inequalities. *)
+      assert (!f < !f)%float by (
+      now apply float_lt_le_trans with (y := !x_as_nonzero)).
+      revert H3.
+      apply Qlt_irrefl.
+Qed.
+
+Theorem ties_not_representable p (f : nonzero_float p) :
+  ~representable p ((!!f + !!next_up f) / 2).
+Proof.
+  apply in_between_not_representable with (f := f).
+  split; (scale_by 2; [ easy | rearrange_goal (!!f < !!next_up f);
+         apply next_up_spec_alt, float_le_refl]).
+Qed.
+
 Theorem ties_representable p (f : nonzero_float p) :
   representable (p + 1) ((!!f + !!next_up f) / 2).
 Proof.
@@ -803,3 +841,34 @@ Proof.
         easy.
         apply next_tie_down_le.
 Qed.
+
+(* Characterization of representability in terms of round_toward_negative. *)
+
+Theorem representable_iff_eq_round_toward_negative p x :
+  representable p x  <->  x == !round_toward_negative p x.
+Proof.
+  split; intro.
+  - set (x_as_float := (exist _ x H : binary_float p)).
+    change x with (!x_as_float).
+    apply Qle_antisym.
+    + cut (x_as_float <= round_toward_negative p (!x_as_float))%float.
+      easy.
+      rewrite <- round_toward_negative_spec.
+      apply Qle_refl.
+    + apply round_toward_negative_spec, float_le_refl.
+  - rewrite H.
+    destruct (round_toward_negative p x).
+    easy.
+Qed.
+
+(* As a corollary, representability is decidable. *)
+
+Definition representable_dec p x : {representable p x} + {~representable p x}.
+Proof.
+  destruct (Qeq_dec x (!round_toward_negative p x)).
+  - left.
+    now apply representable_iff_eq_round_toward_negative.
+  - right.
+    contradict n.
+    now apply representable_iff_eq_round_toward_negative.
+Defined.
