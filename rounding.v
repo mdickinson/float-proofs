@@ -301,33 +301,28 @@ Proof.
   apply round_toward_positive_spec, float_le_refl.
 Qed.
 
-(* Lemma that we'll need for the main theorem: the only discontinuities
-   of round_toward_negative are elements of binary_float p.  Here's a way
-   to state that result: if x <= y and round(x) != round(y), then there's
-   an element of binary_float p in [x, y] *)
+(* Lemma that we'll need for the main theorem: the only discontinuities of
+   round_toward_negative are elements of binary_float p.  More precisely, if
+   round x < round y then there's an element of binary_float in [x, y]. *)
 
-Lemma round_toward_negative_discontinuities p (x y : Q) :
-  x <= y  ->
-  ~(round_toward_negative p x == round_toward_negative p y)%float ->
-  exists (z : binary_float p), x <= proj1_sig z <= y.
+Theorem round_toward_negative_jumps p x y :
+  (round_toward_negative p x < round_toward_negative p y)%float ->
+  exists (z : binary_float p), x <= !z <= y.
 Proof.
-  intros; exists (round_toward_negative p y); split.
-  - apply Qlt_le_weak, round_toward_negative_spec_lt, float_le_not_eq;
-    try apply round_toward_negative_monotonic; easy.
+  intro round_x_le_round_y; exists (round_toward_negative p y); split.
+  - now apply Qlt_le_weak, round_toward_negative_spec_lt.
   - apply round_toward_negative_spec, float_le_refl.
 Qed.
 
 (* And the corresponding result for round_toward_positive. *)
 
-Lemma round_toward_positive_discontinuities p (x y : Q) :
-  x <= y ->
-  ~(round_toward_positive p x  ==  round_toward_positive p y)%float ->
-  exists (z : binary_float p), x <= proj1_sig z <= y.
+Theorem round_toward_positive_jumps p x y :
+  (round_toward_positive p x < round_toward_positive p y)%float ->
+  exists (z : binary_float p), x <= !z <= y.
 Proof.
-  intros H H0; exists (round_toward_positive p x); split.
+  intro round_x_le_round_y; exists (round_toward_positive p x); split.
   - apply round_toward_positive_spec, float_le_refl.
-  - apply Qlt_le_weak, round_toward_positive_spec_lt,
-    float_le_not_eq with (2 := H0); now apply round_toward_positive_monotonic.
+  - now apply Qlt_le_weak, round_toward_positive_spec_lt.
 Qed.
 
 (* Now we need to get some handle on round_ties_to_even.
