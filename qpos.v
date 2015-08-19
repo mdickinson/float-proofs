@@ -6,7 +6,7 @@ Require Import QOrderedType.
 (* Auxiliary facts about Q that don't seem to be readily to
    hand in the standard library. *)
 
-Open Scope Q.
+Local Open Scope Q.
 
 Lemma Q_mul_pos_pos : forall p q : Q, 0 < p -> 0 < q -> 0 < p * q.
 Proof.
@@ -18,7 +18,7 @@ Definition QPos := { x : Q | 0 < x }.
 
 Delimit Scope QPos_scope with QPos.
 
-Open Scope QPos.
+Local Open Scope QPos.
 
 Module Type OrderedTypeFullWithOrderFunctions :=
   OrderedTypeFull <+ HasBoolOrdFuns <+ BoolOrdSpecs.
@@ -203,7 +203,6 @@ Infix "<" := QPos.lt : QPos_scope.
 Infix "<=" := QPos.le : QPos_scope.
 Notation "p > q" := (q < p) (only parsing) : QPos_scope.
 Notation "p >= q" := (q <= p) (only parsing) : QPos_scope.
-Notation "p != q" := (~p==q) (at level 70, no associativity) : QPos_scope.
 
 Infix "?=" := QPos.compare (at level 70, no associativity) : QPos_scope.
 Infix "=?" := QPos.eqb (at level 70, no associativity) : QPos_scope.
@@ -217,7 +216,10 @@ Notation "/ p" := (QPos.inv p) : QPos_scope.
 Notation "1" := QPos.one : QPos_scope.
 Notation "2" := QPos.two : QPos_scope.
 
+Notation "x < y < z" := ((x < y) /\ (y < z)) : QPos_scope.
 Notation "x <= y < z" := ((x <= y) /\ (y < z)) : QPos_scope.
+Notation "x < y <= z" := ((x < y) /\ (y <= z)) : QPos_scope.
+Notation "x <= y <= z" := ((x <= y) /\ (y <= z)) : QPos_scope.
 
 (* Additional results about QPos. *)
 
