@@ -867,3 +867,74 @@ Proof.
     contradict n.
     now apply representable_iff_eq_round_toward_negative.
 Defined.
+
+(* We need to know that round_ties_to_even is monotonic. *)
+
+Lemma square_abs_is_square x :
+  x * x == (Qabs x * Qabs x).
+Proof.
+  apply Qabs_case; intro; ring.
+Qed.
+
+Lemma square_monotonic x y :
+  Qabs x <= Qabs y -> x * x <= y * y.
+Proof.
+  intro; setoid_rewrite square_abs_is_square;
+  apply Qle_trans with (y := Qabs x * Qabs y);
+    [ setoid_rewrite Qmult_comm | ];
+  (apply Qmult_le_compat_r; [ easy | apply Qabs_nonneg]).
+Qed.
+
+
+Theorem round_ties_to_even_monotonic p x y :
+  x <= y  ->  (round_ties_to_even p x <= round_ties_to_even p y)%float.
+Proof.
+  (* Sketch: write a and b for round x and round y.
+
+     Since round rounds to nearest, we have:
+
+         | x - a | <= | x - b |   (1)
+
+     and
+
+         | y - b | <= | y - a |   (2)
+
+     From these it follows by squaring that
+
+         x^2 - 2*a*x + a^2 <= x^2 - 2*b*x + b^2
+
+     and that
+
+         y^2 - 2*b*y + b^2 <= y^2 - 2*a*y + a^2
+
+     Rearranging gives the two inequalities in:
+
+        (b - a) * (2 * x) <= (b - a) * (b + a) <= (b - a) * (2 * y)
+
+     Hence  0 <= (y - x) * (b - a), so y - x and b - a have the same
+     sign, or at least one of them is zero.  But if x == y then a == b,
+     so either way we have a <= b.
+   *)
+
+  intro.
+  (* Divide into cases x < y, x == y. *)
+  destruct (Qle_lt_eq _ _ H); clear H.
+  - (* Harder case. *)
+    pose proof (round_ties_to_even_nearest p x (round_ties_to_even p y)).
+    pose proof (round_ties_to_even_nearest p y (round_ties_to_even p x)).
+    unfold float_le.
+    remember (!round_ties_to_even p x) as a.
+    remember (!round_ties_to_even p y) as b.
+    scale_by (2 * (y - x)).
+    scale_by (/2).
+    easy.
+    rearrange.
+    rearrange_goal ((b - a) * (2 * x) <= (b - a) * (2 * y)).
+    apply Qle_trans with (y := (b - a) * (b + a)).
+    + rearrange_goal ((x - a) * (x - a) <= (x - b) * (x - b)).
+      now apply square_monotonic.
+    + rearrange_goal ((y - b) * (y - b) <= (y - a) * (y - a)).
+      now apply square_monotonic.
+  - (* Easy case. *)
+    rewrite H0; apply float_le_refl.
+Qed.
