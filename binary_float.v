@@ -297,3 +297,9 @@ Lemma float_le_not_eq p (x y : binary_float p) :
 Proof.
   apply Qle_not_eq.
 Qed.
+
+
+Definition float_eq_dec p (x y : binary_float p) : { x == y } + { ~(x == y) }.
+Proof.
+  apply Qeq_dec.
+Defined.
