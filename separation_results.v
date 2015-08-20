@@ -262,12 +262,13 @@ Proof.
   (* Split: show x/y - z < 1 and z - x/y < 1. *)
   - apply Qle_lt_trans with (y := x_over_y - floorQ x_over_y).
     + rearrange.
-    + rearrange_goal (x_over_y < floorQ x_over_y + 1);
-      now apply floor_spec_alt.
+    + rearrange_goal (x_over_y < floorQ x_over_y + inject_Z 1);
+      unfold floorQ; rewrite <- inject_Z_plus; apply floor_spec_lt; omega.
   - apply Qle_lt_trans with (y := ceilingQ x_over_y - x_over_y).
     + rearrange.
-    + rearrange_goal (ceilingQ x_over_y - 1 < x_over_y).
-      now apply ceiling_spec_alt.
+    + rearrange_goal (ceilingQ x_over_y - inject_Z 1 < x_over_y);
+      unfold Qminus, ceilingQ; rewrite <- inject_Z_opp, <- inject_Z_plus;
+      apply ceiling_spec_lt; omega.
 Qed.
 
 Lemma x_minus_yz_small :
