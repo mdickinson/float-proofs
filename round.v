@@ -130,9 +130,12 @@ Qed.
 Lemma floor_ceiling_equal q :
   excess q == 0 -> inject_Z (ceiling q) == inject_Z (floor q).
 Proof.
-  unfold excess; intro; transitivity q;
-  [ apply ceiling_integer, floor_integer | ]; rearrange.
-Qed.
+  unfold excess; intro; transitivity q.
+  - apply ceilingQ_eq;
+    setoid_replace q with (inject_Z (floor q)) by rearrange;
+    apply is_integer_inject_Z.
+  - rearrange.
+Qed.    
 
 Lemma exact_floor q : excess_class q = Exact -> q - inject_Z (floor q) == 0.
 Proof.

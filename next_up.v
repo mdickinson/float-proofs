@@ -207,12 +207,12 @@ Lemma reconstruct_float p (f : nonzero_float p) :
   (inject_Z (low_significand f) * twopowerQ (low_exponent f) == !!f)%Q.
 Proof.
   pose proof (low_significand_is_integer f);
-  unfold low_significand, low_significand_Q, low_exponent in *.
+  unfold low_significand, low_significand_Q, low_exponent in *;
   rewrite float_by_sign_spec; destruct float_by_sign.
-  - twopower_right; now apply floor_integer.
+  - twopower_right; now apply floorQ_eq.
   - twopower_right; setoid_replace (- !q / twopowerQ (cobinade q - 'p))
                     with (- (!q / twopowerQ (cobinade q - 'p)))%Q
-      by (field; apply twopowerQ_nonzero); now apply floor_integer.
+      by (field; apply twopowerQ_nonzero); now apply floorQ_eq.
 Qed.
 
 Lemma low_significand_bound p (f : nonzero_float p) :
@@ -255,7 +255,7 @@ Proof.
   setoid_replace (inject_Z (low_significand f))
   with (low_significand_Q f) by
       (unfold low_significand;
-       apply floor_integer, low_significand_is_integer);
+       apply floorQ_eq, low_significand_is_integer);
   pose proof (next_up_significand_bound f) as H;
   destruct float_by_sign; destruct H as [Hlower Hupper].
   - rewrite Qabs_pos.
@@ -275,7 +275,7 @@ Proof.
   setoid_replace (inject_Z (low_significand f))
   with (low_significand_Q f) by
       (unfold low_significand;
-       apply floor_integer, low_significand_is_integer).
+       apply floorQ_eq, low_significand_is_integer).
   pose proof (next_up_significand_bound f) as H.
   destruct float_by_sign; destruct H as [Hlower Hupper].
   - rewrite Qabs_pos.
@@ -357,7 +357,7 @@ Proof.
         twopower_left.
         rewrite H0.
         apply Qle_refl.
-        apply floor_integer.
+        apply floorQ_eq.
         apply low_significand_is_integer.
         easy.
     + (* Case f negative. *)
@@ -390,7 +390,7 @@ Proof.
         twopower_right.
         rewrite <- H0.
         easy.
-        apply floor_integer.
+        apply floorQ_eq.
         apply low_significand_is_integer.
       * (* Case where g is not in the same binade. *)
         apply Qle_trans with (2 := q0).
@@ -415,7 +415,7 @@ Proof.
         twopower_left.
         apply twopower_cobinade_lt.
         omega.
-        apply floor_integer.
+        apply floorQ_eq.
         apply low_significand_is_integer.
 Qed.
 
@@ -453,7 +453,7 @@ Proof.
     easy.
     rearrange_goal (0 < twopowerQ ('p - 1))%Q.
     apply twopowerQ_positive.
-    apply floor_integer.
+    apply floorQ_eq.
     apply low_significand_is_integer.
 Qed.
 

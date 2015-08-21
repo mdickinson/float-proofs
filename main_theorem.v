@@ -96,7 +96,7 @@ Section MainTheorem.
        since 2^r is integral.  But that property we have in spades. *)
     apply Qle_trans with (y := floorQ (Qabs (!x / !y))).
     apply Qabs_case; intro.
-    apply integer_le_floor.
+    apply floorQ_intro.
     apply is_integer_twopowerQ.
     easy.
     setoid_rewrite <- Qabs_pos at 2.
@@ -108,7 +108,7 @@ Section MainTheorem.
     setoid_replace (floorQ (- (!x / !y)))
     with (- ceilingQ (!x / !y)).
     apply remedial.le_neg_switch_r.
-    apply integer_le_ceiling.
+    apply ceilingQ_intro.
     apply is_integer_neg.
     apply is_integer_twopowerQ.
     easy.
@@ -131,7 +131,7 @@ Section MainTheorem.
     rewrite Qabs_pos.
     easy.
     apply Qle_trans with (y := floorQ (!x / !y)).
-    apply integer_le_floor.
+    apply floorQ_intro.
     exists (0%Z). easy.
     easy.
     easy.
@@ -147,7 +147,7 @@ Section MainTheorem.
     now rewrite neg_ceiling_is_floor_neg.
     apply Qle_trans with (y := ceilingQ (!x / !y)).
     easy.
-    apply integer_le_ceiling.
+    apply ceilingQ_intro.
     now (exists 0%Z).
     easy.
 
@@ -156,12 +156,10 @@ Section MainTheorem.
     setoid_replace (floorQ (!x / !y)) with (!x / !y).
     setoid_replace (ceilingQ (!x / !y)) with (!x / !y).
     easy.
-    apply ceiling_integer.
-    rewrite H0.
-    easy.
-    apply floor_integer.
-    rewrite H0.
-    easy.
+    apply ceilingQ_eq.
+    now rewrite H0.
+    apply floorQ_eq.
+    now rewrite H0.
     assert (round_ties_to_even r (floorQ (!x / !y)) ==
             round_ties_to_even r (ceilingQ (!x / !y)))%float.
     rewrite H2.

@@ -108,7 +108,7 @@ Proof.
       intro.
       * (* Case 2^(binade x) <= f.  Then we should be able to show
            that f is an integer. *)
-        apply integer_le_floor.
+        apply floorQ_intro.
         {
           apply (large_representable_is_integer p).
           - apply scaled_representable_is_representable_div; now destruct f.
@@ -126,14 +126,14 @@ Proof.
           now twopower_right.
         }
         {
-          apply integer_le_floor.
+          apply floorQ_intro.
           - apply is_integer_twopowerQ; assert (0 < 'p)%Z by easy; omega.
           - twopower_left;
             setoid_replace x with (Qabs x) at 2 by (symmetry; now apply Qabs_pos);
             apply (twopowerQ_binadeQ_le _ _ x_nonzero); apply Z.le_refl.
         }
     + (* Case x <= 0. *)
-      apply integer_le_floor.
+      apply floorQ_intro.
       * (* x <= 0, showing f / 2^(e-p+1) is an integer *)
         apply (large_representable_is_integer p).
         {
@@ -487,7 +487,7 @@ Proof.
     apply qpos.Q_mul_pos_pos with (2 := twopowerQ_positive _).
     apply Qlt_le_trans with (y := twopowerQ ('p - 1)).
     apply twopowerQ_positive.
-    apply integer_le_floor.
+    apply floorQ_intro.
     apply is_integer_twopowerQ.
     assert (0 < 'p)%Z by easy; omega.
     twopower_left.
@@ -506,7 +506,7 @@ Proof.
   - unfold float_from_significand_and_exponent; simpl.
     twopower_right.
     apply Qle_lt_trans with (y := -twopowerQ ('p - 1)).
-    apply integer_le_ceiling.
+    apply ceilingQ_intro.
     apply is_integer_neg.
     apply is_integer_twopowerQ.
     assert (0 < 'p)%Z by easy; omega.
@@ -686,7 +686,7 @@ Proof.
   repeat (rewrite inject_Z_plus);
   setoid_replace (inject_Z (floor (low_significand_Q f)))
   with (low_significand_Q f)
-    by (apply floor_integer, low_significand_is_integer);
+    by (apply floorQ_eq, low_significand_is_integer);
   rewrite Pos2Z.inj_add.
   - rewrite Qabs_pos.
     + apply Qlt_le_succ.

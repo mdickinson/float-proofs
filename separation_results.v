@@ -337,7 +337,7 @@ Proof.
   clear H.
 
   apply Qle_trans with (y := inject_Z (floor (Qabs x_over_y))).
-  apply integer_le_floor.
+  apply floorQ_intro.
   apply is_integer_twopowerQ.
   assert (1 <= 'q)%Z by apply Pos.le_1_l.
   assert (1 <= 'r)%Z by apply Pos.le_1_l.
@@ -474,7 +474,7 @@ Proof.
   replace 0 with (inject_Z 0) by (now compute).
   apply Qlt_le_trans with (y := twopowerQ ('q + 'r - 1)).
   apply twopowerQ_positive.
-  apply integer_le_floor.
+  apply floorQ_intro.
   apply is_integer_twopowerQ.
   assert (0 < 'q)%Z by easy; assert (0 < 'r)%Z by easy; omega.
   easy.
@@ -485,7 +485,7 @@ Lemma binade_z_large : (c <= binadeQ (proj1_sig z) z_nonzero)%Z.
 Proof.
   apply twopowerQ_binadeQ_le.
   apply Qle_trans with (y := inject_Z (floor (Qabs x_over_y))).
-  apply integer_le_floor.
+  apply floorQ_intro.
 
   (* Now showing that 2^c is integral. *)
   apply is_integer_twopowerQ.
@@ -608,7 +608,7 @@ Qed.
 Lemma z_large2 : twopowerQ c <= Qabs (proj1_sig z).
 Proof.
   apply Qle_trans with (y := floorQ (Qabs x_over_y)).
-  apply integer_le_floor.
+  apply floorQ_intro.
   apply is_integer_twopowerQ.
   apply Z.le_trans with (m := ('p - 1)%Z).
   assert (0 < 'p)%Z by easy; omega.
