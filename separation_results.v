@@ -262,12 +262,13 @@ Proof.
   (* Split: show x/y - z < 1 and z - x/y < 1. *)
   - apply Qle_lt_trans with (y := x_over_y - floorQ x_over_y).
     + rearrange.
-    + rearrange_goal (x_over_y < floorQ x_over_y + 1);
-      now apply floor_spec_alt.
+    + rearrange_goal (x_over_y < floorQ x_over_y + inject_Z 1);
+      unfold floorQ; rewrite <- inject_Z_plus; apply floor_spec_lt; omega.
   - apply Qle_lt_trans with (y := ceilingQ x_over_y - x_over_y).
     + rearrange.
-    + rearrange_goal (ceilingQ x_over_y - 1 < x_over_y).
-      now apply ceiling_spec_alt.
+    + rearrange_goal (ceilingQ x_over_y - inject_Z 1 < x_over_y);
+      unfold Qminus, ceilingQ; rewrite <- inject_Z_opp, <- inject_Z_plus;
+      apply ceiling_spec_lt; omega.
 Qed.
 
 Lemma x_minus_yz_small :
@@ -336,7 +337,7 @@ Proof.
   clear H.
 
   apply Qle_trans with (y := inject_Z (floor (Qabs x_over_y))).
-  apply integer_le_floor.
+  apply floorQ_intro.
   apply is_integer_twopowerQ.
   assert (1 <= 'q)%Z by apply Pos.le_1_l.
   assert (1 <= 'r)%Z by apply Pos.le_1_l.
@@ -473,7 +474,7 @@ Proof.
   replace 0 with (inject_Z 0) by (now compute).
   apply Qlt_le_trans with (y := twopowerQ ('q + 'r - 1)).
   apply twopowerQ_positive.
-  apply integer_le_floor.
+  apply floorQ_intro.
   apply is_integer_twopowerQ.
   assert (0 < 'q)%Z by easy; assert (0 < 'r)%Z by easy; omega.
   easy.
@@ -484,7 +485,7 @@ Lemma binade_z_large : (c <= binadeQ (proj1_sig z) z_nonzero)%Z.
 Proof.
   apply twopowerQ_binadeQ_le.
   apply Qle_trans with (y := inject_Z (floor (Qabs x_over_y))).
-  apply integer_le_floor.
+  apply floorQ_intro.
 
   (* Now showing that 2^c is integral. *)
   apply is_integer_twopowerQ.
@@ -607,7 +608,7 @@ Qed.
 Lemma z_large2 : twopowerQ c <= Qabs (proj1_sig z).
 Proof.
   apply Qle_trans with (y := floorQ (Qabs x_over_y)).
-  apply integer_le_floor.
+  apply floorQ_intro.
   apply is_integer_twopowerQ.
   apply Z.le_trans with (m := ('p - 1)%Z).
   assert (0 < 'p)%Z by easy; omega.
