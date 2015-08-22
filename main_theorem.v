@@ -24,6 +24,14 @@ Proof.
   destruct (float_eq_dec x y); tauto.
 Qed.
 
+Lemma floorQ_eq_ceilingQ q :
+  is_integer q -> floorQ q == ceilingQ q.
+Proof.
+  intro.
+  transitivity q.
+  now apply floorQ_eq.
+  symmetry. now apply ceilingQ_eq.
+Qed.
 
 
 Section MainTheorem.
@@ -221,4 +229,89 @@ Section MainTheorem.
 
   End MainTheoremPLarge.
   
+  Section MainTheoremRoundDirectedPSmall.
+
+    Hypothesis p_small : ('p < 'q + 'r)%Z.
+    Hypothesis x_over_y_large : twopowerQ ('q + 'r - 1) <= Qabs (!x / !y).
+
+    Theorem round_down_floor_is_round_down_ceiling_p_small :
+      (round_toward_negative r (floorQ (!x / !y)) ==
+       round_toward_negative r (ceilingQ (!x / !y)))%float.
+    Proof.
+      apply bob; intro.
+      assert (round_toward_negative r (floorQ (!x / !y)) <
+              round_toward_negative r (ceilingQ (!x / !y)))%float by
+          (apply float_le_not_eq; try easy; 
+           apply round_toward_negative_monotonic, Qle_trans with (y := !x / !y);
+           [apply floorQ_le | apply ceilingQ_le]).
+      destruct (round_toward_negative_jumps r (floorQ (!x / !y)) (ceilingQ (!x / !y)) H0) as [z z_bounds].
+      f_equiv.
+      apply floorQ_eq_ceilingQ.
+      apply (x_over_y_integral p q r x y z x_nonzero y_nonzero); easy.
+    Qed.
+
+    Theorem round_up_floor_is_round_up_ceiling_p_small :
+      (round_toward_positive r (floorQ (!x / !y)) ==
+       round_toward_positive r (ceilingQ (!x / !y)))%float.
+    Proof.
+      apply bob; intro.
+      assert (round_toward_positive r (floorQ (!x / !y)) <
+              round_toward_positive r (ceilingQ (!x / !y)))%float by
+          (apply float_le_not_eq; try easy; 
+           apply round_toward_positive_monotonic, Qle_trans with (y := !x / !y);
+           [apply floorQ_le | apply ceilingQ_le]).
+      destruct (round_toward_positive_jumps r (floorQ (!x / !y)) (ceilingQ (!x / !y)) H0) as [z z_bounds].
+      f_equiv.
+      apply floorQ_eq_ceilingQ.
+      apply (x_over_y_integral p q r x y z x_nonzero y_nonzero); easy.
+    Qed.
+
+  End MainTheoremRoundDirectedPSmall.
+
+  Section MainTheoremRoundDirectedPLarge.
+
+    Hypothesis p_small : ('q + 'r <= 'p)%Z.
+    Hypothesis x_over_y_large : ('p <= binadeQ (!x) x_nonzero - binadeQ (!y) y_nonzero)%Z.
+
+    Theorem round_down_floor_is_round_down_ceiling_p_large :
+      (round_toward_negative r (floorQ (!x / !y)) ==
+       round_toward_negative r (ceilingQ (!x / !y)))%float.
+    Proof.
+      apply bob; intro.
+      assert (round_toward_negative r (floorQ (!x / !y)) <
+              round_toward_negative r (ceilingQ (!x / !y)))%float by
+          (apply float_le_not_eq; try easy; 
+           apply round_toward_negative_monotonic, Qle_trans with (y := !x / !y);
+           [apply floorQ_le | apply ceilingQ_le]).
+      destruct (round_toward_negative_jumps r (floorQ (!x / !y)) (ceilingQ (!x / !y)) H0) as [z z_bounds].
+      f_equiv.
+      apply floorQ_eq_ceilingQ.
+      now apply (x_over_y_integral2 p q r x y z x_nonzero y_nonzero).
+    Qed.
+
+    Theorem round_up_floor_is_round_up_ceiling_p_large :
+      (round_toward_positive r (floorQ (!x / !y)) ==
+       round_toward_positive r (ceilingQ (!x / !y)))%float.
+    Proof.
+      apply bob; intro.
+      assert (round_toward_positive r (floorQ (!x / !y)) <
+              round_toward_positive r (ceilingQ (!x / !y)))%float by
+          (apply float_le_not_eq; try easy; 
+           apply round_toward_positive_monotonic, Qle_trans with (y := !x / !y);
+           [apply floorQ_le | apply ceilingQ_le]).
+      destruct (round_toward_positive_jumps r (floorQ (!x / !y)) (ceilingQ (!x / !y)) H0) as [z z_bounds].
+      f_equiv.
+      apply floorQ_eq_ceilingQ.
+      now apply (x_over_y_integral2 p q r x y z x_nonzero y_nonzero).
+    Qed.
+
+  End MainTheoremRoundDirectedPLarge.
+  
 End MainTheorem.
+
+Check round_floor_is_round_ceiling_p_small.
+Check round_floor_is_round_ceiling_p_large.
+Check round_up_floor_is_round_up_ceiling_p_small.
+Check round_up_floor_is_round_up_ceiling_p_large.
+Check round_down_floor_is_round_down_ceiling_p_small.
+Check round_down_floor_is_round_down_ceiling_p_large.

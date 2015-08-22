@@ -635,24 +635,10 @@ Qed.
 
 Lemma z_integral2 : is_integer (proj1_sig z).
 Proof.
-  apply (large_representable_is_integer r).
-  now destruct z.
-  apply (twopowerQ_binadeQ_le ('r - 1) (proj1_sig z) (z_nonzero2)).
-  apply Z.le_trans with (2 := binade_z_large2).
-  (* Now showing that r - 1 <= c.
-     But c is more-or-less a - b, so we're showing that r <= a - b (ish)
-     and r <= q + r <= p <= a - b. So we're done. *)
-  apply Z.le_trans with (2 := a_small).
-  (* r - 1 <= a - b - 1. *)
-  apply Z.le_trans with (m := ('p - 1)%Z).
-  cut ('r <= 'p)%Z.
-  omega.
-  apply Z.le_trans with (m := ('q + 'r)%Z).
-  cut (0 <= 'q)%Z.
-  omega.
-  easy.
-  easy.
-  omega.
+  apply (large_representable_is_integer r); try (now destruct z);
+  apply (twopowerQ_binadeQ_le ('r - 1) (proj1_sig z) (z_nonzero2));
+  apply Z.le_trans with (2 := binade_z_large2);
+  pose proof a_small; assert (0 < 'q)%Z by easy; omega.
 Qed.
 
 Lemma x_is_quantized2 : is_multiple_of quantum (proj1_sig x).
