@@ -1,12 +1,12 @@
+Set Implicit Arguments.
+
 Require Import QArith.
 Require Import Qabs.
 
 Require Import rearrange_tactic.
-Require Import floor_and_ceiling.
-
+Require Import is_integer.
 
 Local Open Scope Q.
-
 
 Definition is_multiple_of (y x : Q) :=
   exists (m : Q), is_integer m  /\  x == m * y.

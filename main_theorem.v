@@ -4,6 +4,7 @@ Require Import ZArith.
 Require Import QArith.
 Require Import Qabs.
 
+Require Import is_integer.
 Require Import floor_and_ceiling.
 Require Import binary_float.
 Require Import separation_results.

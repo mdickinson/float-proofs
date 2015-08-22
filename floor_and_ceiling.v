@@ -2,11 +2,14 @@
 
    Also defines is_integer. *)
 
+Set Implicit Arguments.
+
 Require Import ZArith.
 Require Import QArith.
 Require Import Qabs.
 
 Require Import remedial.
+Require Import is_integer.
 
 Local Open Scope Z.
 
@@ -103,49 +106,6 @@ Qed.
 Theorem neg_floor_is_ceiling_neg q : (- floor q)%Z = ceiling (-q).
 Proof.
   unfold ceiling; now rewrite Qopp_opp.
-Qed.
-
-(* Next we define is_integer, a relation that's true only for the
-   image of Z in Q. *)
-
-Definition is_integer q := exists n : Z, inject_Z n == q.
-
-Add Parametric Morphism : is_integer
-    with signature Qeq ==> iff as is_integer_morphism.
-Proof.
-  split; destruct 1 as [n n_eq]; exists n; now rewrite n_eq.
-Qed.
-
-(* Some basic properties of is_integer. *)
-
-Theorem is_integer_inject_Z n : is_integer (inject_Z n).
-Proof.
-  now exists n.
-Qed.
-
-Theorem is_integer_neg q : is_integer q -> is_integer (-q).
-Proof.
-  destruct 1 as [n n_eq_q]; exists (-n)%Z; now rewrite inject_Z_opp, n_eq_q.
-Qed.
-
-Theorem is_integer_add q r :
-  is_integer q -> is_integer r -> is_integer (q + r).
-Proof.
-  destruct 1 as [m m_eq_q], 1 as [n n_eq_r]; exists (m + n)%Z;
-  now rewrite inject_Z_plus, m_eq_q, n_eq_r.
-Qed.
-
-Theorem is_integer_mul q r :
-  is_integer q -> is_integer r -> is_integer (q * r).
-Proof.
-  destruct 1 as [m m_eq_q], 1 as [n n_eq_r]; exists (m * n)%Z;
-  now rewrite inject_Z_mult, m_eq_q, n_eq_r.
-Qed.
-
-Theorem is_integer_sub q r :
-  is_integer q -> is_integer r -> is_integer (q - r).
-Proof.
-  intros; apply is_integer_add; now try apply is_integer_neg.
 Qed.
 
 (* We can recast floor and ceiling as functions from Q to Q. *)
@@ -290,12 +250,28 @@ Proof.
       * easy.
 Qed.
 
-Theorem small_integer_is_zero q :
-  is_integer q -> Qabs q < 1 -> q == 0.
+(* XXX These two lemmas need to go elsewhere. *)
+
+Require Import rearrange_tactic.
+
+Lemma Qlt_le_succ x y : is_integer x -> is_integer y ->
+                (x + 1 <= y  <->  x < y).
 Proof.
-  destruct 1 as [n H]; rewrite <- H; clear H; rewrite Qabs_Zabs;
-  change 0 with (inject_Z 0); change 1 with (inject_Z 1);
-  rewrite inject_Z_injective, <- Zlt_Qlt; intro;
-  assert (-0 <= n <= 0)%Z by (now apply Z.abs_le, Z.lt_succ_r);
-  now apply Z.le_antisymm.
+  intros x_integer y_integer; split; intro H.
+  - apply Qlt_le_trans with (y := x + 1); [rearrange_goal (0 < 1) | ]; easy.
+  - destruct x_integer as [m Hm], y_integer as [n Hn].
+    revert H; rewrite <- Hm; rewrite <- Hn; intro H.
+    setoid_replace 1 with (inject_Z 1) by now compute.
+    rewrite <- inject_Z_plus.
+    rewrite <- Zle_Qle.
+    apply Zlt_le_succ.
+    rewrite Zlt_Qlt.
+    easy.
+Qed.
+
+Lemma Qlt_le_pred x y : is_integer x -> is_integer y ->
+                        (x < y  <->  x <= y - 1).
+Proof.
+  setoid_replace (x <= y - 1) with (x + 1 <= y) by (split; intro; rearrange).
+  intros; split; now apply Qlt_le_succ.
 Qed.

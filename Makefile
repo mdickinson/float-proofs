@@ -1,6 +1,7 @@
 MODULES := rearrange_tactic remedial floor_and_ceiling is_multiple_of \
 	round qpos twopower cobinade twopower_tactics binary_float \
-	rounding separation_results next_up binade main_theorem
+	rounding separation_results next_up binade main_theorem \
+	is_integer
 VS := $(MODULES:%=%.v)
 
 .PHONY: coq clean

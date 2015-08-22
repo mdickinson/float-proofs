@@ -4,6 +4,7 @@ Require Import Qabs.
 
 Require Import remedial.
 Require Import rearrange_tactic.
+Require Import is_integer.
 Require Import floor_and_ceiling.
 Require Import qpos.
 Require Import twopower.
