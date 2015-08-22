@@ -65,27 +65,19 @@ Qed.
 
 Lemma Qmul_gt1_gt1 : forall (q r : Q), 1 < q -> 1 < r -> 1 < q * r.
 Proof.
-  intros q r one_lt_q one_lt_r.
-  setoid_replace 1 with (1 * 1) by ring.
-  apply Qlt_trans with (y := q * 1).
-  apply Qmult_lt_r. easy. easy.
-  apply Qmult_lt_l.
-  apply Qlt_trans with (y := 1); auto.
-  easy. easy.
+  intros q r one_lt_q one_lt_r; apply Qlt_trans with (1 := one_lt_q);
+  setoid_replace q with (q * 1) at 1 by ring;
+  apply Qmult_lt_l with (2 := one_lt_r);
+  apply Qlt_trans with (2 := one_lt_q); easy.
 Qed.
 
 Lemma Qmul_ge1_ge1 : forall (q r : Q), 1 <= q  ->  1 <= r  ->  1 <= q * r.
 Proof.
-  intros q r one_le_q one_le_r; setoid_replace 1 with (1 * 1) by ring;
-  apply Qle_trans with (y := q * 1); [ apply Qmult_le_r |
-  apply Qmult_le_l; [apply Qlt_le_trans with (y := 1) | ]]; easy.
+  intros q r one_le_q one_le_r; apply Qle_trans with (1 := one_le_q);
+  setoid_replace q with (q * 1) at 1 by ring;
+  apply Qmult_le_l with (2 := one_le_r);
+  apply Qlt_le_trans with (2 := one_le_q); easy.
 Qed.
-
-Lemma inject_Z_one : (inject_Z 1 == 1).
-Proof.
-  easy.
-Qed.
-
 
 Hint Resolve Qmul_gt1_gt1.
 Hint Resolve Qmul_ge1_ge1.
@@ -108,28 +100,26 @@ Qed.
 
 Local Open Scope QPos.
 
-Definition twopower (n : Z) : QPos.
-  refine (exist _ (inject_Z 2 ^ n)%Q _).
-  apply two_to_the_power_n_is_positive.
-Defined.
+Definition twopower (n : Z) : QPos :=
+  exist _ (inject_Z 2 ^ n)%Q (two_to_the_power_n_is_positive n).
 
 Lemma twopower_compat : forall p, twopower (' p) == QPos_from_pos (2^p).
 Proof.
-  intro p. unfold QPos.eq. simpl.
-  rewrite Pos2Z.inj_pow.
-  rewrite Zpower_Qpower. reflexivity.
-  auto with zarith.
+  intro p; unfold QPos.eq; simpl; rewrite Pos2Z.inj_pow, Zpower_Qpower; easy.
 Qed.
 
 
-Lemma twopower_mul : forall p q : Z, twopower (p + q) == (twopower p) * (twopower q).
+Lemma twopower_mul :
+  forall p q : Z, twopower (p + q) == (twopower p) * (twopower q).
 Proof.
   unfold QPos.eq, twopower; intros; now apply Qpower_plus.
 Qed.
 
-Lemma twopower_div : forall p q : Z, twopower (p - q) == (twopower p) / (twopower q).
+Lemma twopower_div :
+  forall p q : Z, twopower (p - q) == (twopower p) / (twopower q).
 Proof.
-  intros p q; remember (p - q)%Z as r; replace p with (r + q)%Z by (rewrite Heqr; ring).
+  intros p q; remember (p - q)%Z as r;
+  replace p with (r + q)%Z by (rewrite Heqr; ring);
   apply QPos_div_mul_r; symmetry; apply twopower_mul.
 Qed.
 
@@ -152,18 +142,19 @@ Qed.
 Lemma twopower_of_positive : forall p, (0 < p)%Z -> 1 < twopower p.
 Proof.
   intros p p_pos; unfold twopower, QPos.lt; simpl;
-  rewrite inject_Z_one; apply Qpower_one_lt; easy.
+  change (inject_Z 1) with 1%Q; apply Qpower_one_lt; easy.
 Qed.
 
 
 Lemma twopower_of_nonnegative : forall p, (0 <= p)%Z -> 1 <= twopower p.
 Proof.
   intros p p_nonneg; unfold twopower, QPos.le; simpl;
-  rewrite inject_Z_one; apply Qpower_one_le; easy.
+  change (inject_Z 1) with 1%Q; apply Qpower_one_le; easy.
 Qed.
 
 
-Lemma twopower_monotonic_le : forall p q, (p <= q)%Z -> twopower p <= twopower q.
+Lemma twopower_monotonic_le :
+  forall p q, (p <= q)%Z -> twopower p <= twopower q.
 Proof.
   intros p q p_le_q;
   (* rewrite as 1 * twopower p <= twopower q *)
@@ -188,33 +179,21 @@ Qed.
 
 Lemma twopower_injective_lt m n : twopower m < twopower n  ->  (m < n)%Z.
 Proof.
-  intro.
-  apply Z.lt_nge.
-  contradict H.
-  apply QPos_le_ngt.
+  intro; apply Z.lt_nge; contradict H; apply QPos_le_ngt;
   now apply twopower_monotonic_le.
 Qed.
 
 
 Lemma twopower_injective_le m n : twopower m <= twopower n  ->  (m <= n)%Z.
 Proof.
-  intro.
-  apply Z.nlt_ge.
-  contradict H.
-  apply QPos_lt_nge.
+  intro; apply Z.nlt_ge; contradict H; apply QPos_lt_nge;
   now apply twopower_monotonic_lt.
 Qed.
 
 
 Lemma twopower_injective m n : twopower m == twopower n -> m = n.
 Proof.
-  intro H.
-  apply Z.le_antisymm.
-  apply twopower_injective_le.
-  now apply QPos_le_eq.
-
-  apply twopower_injective_le.
-  now apply QPos_le_eq.
+  intro H; apply Z.le_antisymm; now apply twopower_injective_le, QPos_le_eq.
 Qed.
 
 
@@ -225,23 +204,19 @@ Qed.
 
 Lemma pos_size_lt : forall p, QPos_from_pos p < twopower (' Pos.size p).
 Proof.
-  intro p. rewrite twopower_compat. apply QPos_from_pos_lt.
-  apply Pos.size_gt.
+  intro; rewrite twopower_compat; apply QPos_from_pos_lt, Pos.size_gt.
 Qed.
 
 Lemma pos_size_le' : forall p, twopower (' Pos.size p) <= QPos_from_pos (p~0).
 Proof.
-  intro p. rewrite twopower_compat. apply QPos_from_pos_le.
-  apply Pos.size_le.
+  intro p; rewrite twopower_compat; apply QPos_from_pos_le, Pos.size_le.
 Qed.
 
 Lemma pos_size_le : forall p, twopower (' Pos.size p - 1) <= QPos_from_pos p.
 Proof.
-  intro p. rewrite twopower_div. rewrite twopower_one.
-  apply QPos_div_mul_le_r. rewrite <- QPos_from_pos_two.
-  rewrite <- QPos_from_pos_mul.
-  rewrite <- positive_times_two.
-  apply pos_size_le'.
+  intro p; rewrite twopower_div, twopower_one;
+  apply QPos_div_mul_le_r; rewrite <- QPos_from_pos_two,
+  <- QPos_from_pos_mul, <- positive_times_two; apply pos_size_le'.
 Qed.
 
 Lemma mul_le p q r s : p <= q -> r <= s -> p*r <= q * s.
@@ -335,4 +310,3 @@ Lemma Qabs_twopowerQ n :
 Proof.
   apply Qabs_pos, Qlt_le_weak, twopowerQ_positive.
 Qed.
-

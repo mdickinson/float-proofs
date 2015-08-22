@@ -16,10 +16,6 @@ Require Import binary_float.
 
 Open Scope Q.
 
-Definition floorQ (q : Q) := inject_Z (floor q).
-
-Definition ceilingQ (q : Q) := inject_Z (ceiling q).
-
 Lemma is_multiple_of_twopower (m n : Z) :
   (m <= n)%Z  ->  is_multiple_of (twopowerQ m) (twopowerQ n).
 Proof.
@@ -586,6 +582,7 @@ Hypothesis p_large : ('q + 'r <= 'p)%Z.
 
 Hypothesis x_over_y_large : ('p <= a - b)%Z.
 
+(* Could be moved earlier: doesn't require p_large or x_over_y_large. *)
 
 Lemma a_small : (a - b - 1 <= c)%Z.
 Proof.
@@ -636,6 +633,28 @@ Proof.
 Qed.
 
 
+Lemma z_integral2 : is_integer (proj1_sig z).
+Proof.
+  apply (large_representable_is_integer r).
+  now destruct z.
+  apply (twopowerQ_binadeQ_le ('r - 1) (proj1_sig z) (z_nonzero2)).
+  apply Z.le_trans with (2 := binade_z_large2).
+  (* Now showing that r - 1 <= c.
+     But c is more-or-less a - b, so we're showing that r <= a - b (ish)
+     and r <= q + r <= p <= a - b. So we're done. *)
+  apply Z.le_trans with (2 := a_small).
+  (* r - 1 <= a - b - 1. *)
+  apply Z.le_trans with (m := ('p - 1)%Z).
+  cut ('r <= 'p)%Z.
+  omega.
+  apply Z.le_trans with (m := ('q + 'r)%Z).
+  cut (0 <= 'q)%Z.
+  omega.
+  easy.
+  easy.
+  omega.
+Qed.
+
 Lemma x_is_quantized2 : is_multiple_of quantum (proj1_sig x).
 Proof.
   apply is_multiple_of_transitive with (b := twopowerQ (a - 'p + 1)).
@@ -685,6 +704,12 @@ Proof.
   scale_by (proj1_sig y).
   pose proof x_is_yz2.
   rearrange.
+Qed.
+
+Theorem x_over_y_integral2 : is_integer x_over_y.
+Proof.
+  rewrite second_separation_theorem.
+  apply z_integral2.
 Qed.
 
 End SecondSeparationTheorem.
