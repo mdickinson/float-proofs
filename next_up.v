@@ -18,28 +18,6 @@ Set Implicit Arguments.
 
 Local Open Scope Q.
 
-Lemma Qlt_le_succ x y : is_integer x -> is_integer y ->
-                (x + 1 <= y  <->  x < y).
-Proof.
-  intros x_integer y_integer; split; intro H.
-  - apply Qlt_le_trans with (y := x + 1); [rearrange_goal (0 < 1) | ]; easy.
-  - destruct x_integer as [m Hm], y_integer as [n Hn].
-    revert H; rewrite <- Hm; rewrite <- Hn; intro H.
-    setoid_replace 1 with (inject_Z 1) by now compute.
-    rewrite <- inject_Z_plus.
-    rewrite <- Zle_Qle.
-    apply Zlt_le_succ.
-    rewrite Zlt_Qlt.
-    easy.
-Qed.
-
-Lemma Qlt_le_pred x y : is_integer x -> is_integer y ->
-                        (x < y  <->  x <= y - 1).
-Proof.
-  setoid_replace (x <= y - 1) with (x + 1 <= y) by (split; intro; rearrange).
-  intros; split; now apply Qlt_le_succ.
-Qed.
-
 Lemma nonzero_product_is_nonzero (x y : Q) :
   ~(x == 0)%Q -> ~(y == 0)%Q -> ~(x * y == 0)%Q.
 Proof.

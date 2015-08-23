@@ -14,7 +14,7 @@ Require Import twopower_tactics.
 Require Import binade.
 Require Import binary_float.
 
-Open Scope Q.
+Local Open Scope Q.
 
 Lemma is_multiple_of_twopower (m n : Z) :
   (m <= n)%Z  ->  is_multiple_of (twopowerQ m) (twopowerQ n).

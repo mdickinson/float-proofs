@@ -139,20 +139,14 @@ Proof.
   apply floor_spec, Z.le_refl.
 Qed.
 
+(* The following is useful for the auto hint database: it saves an
+   application of Qle_trans. *)
+
 Theorem floorQ_elim q n :
   is_integer n  ->  floorQ q < n  ->  q < n.
 Proof.
   destruct 1 as [m m_eq_n]; unfold floorQ; rewrite <- m_eq_n, <- Zlt_Qlt;
   apply floor_spec_lt.
-Qed.
-
-(* And we can characterise integrality in terms of floorQ. *)
-
-Theorem floorQ_eq q : is_integer q -> floorQ q == q.
-Proof.
-  intro H; apply Qle_antisym.
-  - apply floorQ_le.
-  - apply floorQ_intro; [exact H | apply Qle_refl].
 Qed.
 
 (* Now we have corresponding results for all of the above for ceilingQ. *)
@@ -189,25 +183,50 @@ Proof.
   apply ceiling_spec, Z.le_refl.
 Qed.
 
-Theorem ceilingQ_eq q : is_integer q  ->  ceilingQ q == q.
+Lemma Qle_neg_switch x y : x <= y -> - y <= -x.
 Proof.
-  intro H; apply Qle_antisym.
-  - apply ceilingQ_intro; [ exact H | apply Qle_refl ].
-  - apply ceilingQ_le.
+  now rewrite <- Qopp_le_mono.
 Qed.
 
-Theorem neg_floorQ_is_ceilingQ_neg q : - floorQ q == ceilingQ (- q).
+Hint Immediate is_integer_inject_Z.
+Hint Resolve Qle_neg_switch le_neg_switch le_neg_switch_r.
+Hint Resolve is_integer_neg.
+Hint Resolve floorQ_le floorQ_intro is_integer_floorQ.
+Hint Resolve ceilingQ_le ceilingQ_intro is_integer_ceilingQ.
+Hint Resolve Qle_antisym Qle_refl Qle_trans.
+
+(* The following two lemmas are useful as part of an auto database,
+   since they save one common use of Qle_trans. *)
+
+Lemma floorQ_intro_l q r :
+  q <= r  ->  floorQ q <= r.
 Proof.
-  apply Qle_antisym.
-  - apply le_neg_switch, floorQ_intro.
-    + apply is_integer_neg, is_integer_inject_Z.
-    + apply le_neg_switch, ceilingQ_le.
-  - apply ceilingQ_intro.
-    + apply is_integer_neg, is_integer_inject_Z.
-    + rewrite <- Qopp_le_mono; apply floorQ_le.
+  eauto.
 Qed.
 
-(* As a corollary, is_integer is decidable. *)
+Lemma ceilingQ_intro_r q r :
+  q <= r  ->  q <= ceilingQ r.
+Proof.
+  eauto.
+Qed.
+
+Hint Resolve floorQ_intro_l ceilingQ_intro_r.
+
+(* We can characterise integrality in terms of floorQ and ceilingQ. *)
+
+Theorem floorQ_eq q : is_integer q -> floorQ q == q.
+Proof.
+  auto.
+Qed.
+
+Theorem ceilingQ_eq q : is_integer q -> ceilingQ q == q.
+Proof.
+  auto.
+Qed.
+
+Hint Resolve floorQ_eq ceilingQ_eq.
+
+(* As a corollary of floorQ_eq, is_integer is decidable. *)
 
 Corollary is_integer_dec q : {is_integer q} + {~ is_integer q}.
 Proof.
@@ -216,38 +235,28 @@ Proof.
   - right; contradict notequal; now apply floorQ_eq.
 Defined.
 
+Theorem neg_floorQ_is_ceilingQ_neg q : - floorQ q == ceilingQ (- q).
+Proof.
+  auto.
+Qed.
+
+Theorem neg_ceilingQ_is_floorQ_neg q : - ceilingQ q == floorQ (- q).
+Proof.
+  auto.
+Qed.
+
 (* Results about floor, ceiling and absolute value. *)
 
 Theorem Qabs_floor_le q r :
   is_integer r  ->  Qabs q <= r  ->  Qabs (floorQ q) <= r.
 Proof.
-  intros; apply Qabs_case; intro.
-  - eapply Qle_trans.
-    + apply floorQ_le.
-    + eapply Qle_trans.
-      * apply Qle_Qabs.
-      * easy.
-  - rewrite neg_floorQ_is_ceilingQ_neg; apply ceilingQ_intro.
-    + easy.
-    + eapply Qle_trans.
-      * apply Qle_Qabs_neg.
-      * easy.
+  rewrite ?Qabs_Qle_condition; intro; destruct 1; auto.
 Qed.
 
 Theorem Qabs_ceiling_le q r :
   is_integer r  ->  Qabs q <= r  ->  Qabs (ceilingQ q) <= r.
 Proof.
-  intros; apply Qabs_case; intro.
-  - apply ceilingQ_intro.
-    + easy.
-    + eapply Qle_trans.
-      * apply Qle_Qabs.
-      * easy.
-  - eapply Qle_trans.
-    + rewrite <- Qopp_le_mono; apply ceilingQ_le.
-    + eapply Qle_trans.
-      * apply Qle_Qabs_neg.
-      * easy.
+  rewrite ?Qabs_Qle_condition; intro; destruct 1; auto.
 Qed.
 
 (* XXX These two lemmas need to go elsewhere. *)
