@@ -599,7 +599,7 @@ Proof.
     (Qabs_nonzero (proj1_sig y) y_nonzero)) as y_pos;
   assert (x_over_y_pos == x_pos / y_pos)%QPos as H by (
     unfold QPos.eq; rewrite Heqx_pos, Heqy_pos, Heqx_over_y_pos;
-    setoid_rewrite Qabs_div; easy); rewrite H; apply binade_div.
+    setoid_rewrite <- Qabs_div; easy); rewrite H; apply binade_div.
 Qed.
 
 
