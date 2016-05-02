@@ -12,30 +12,40 @@
 \newtheorem{definition}[lemma]{Definition}
 \newtheorem{example}[lemma]{Example}
 
+\title{Roundtrip conversions between floating-point formats}
+\author{Mark Dickinson}
+
 \begin{document}
 
+\maketitle
+
 This note is a followup from a discussion with Rick Regan in the comments
-section of a \href{http://stackoverflow.com/a/35708911/270986}{StackOverflow
-  question}. The aim is to give a short proof of the condition for
+section of a \href{http://stackoverflow.com/a/35708911/270986}{Stack Overflow
+  question}[\ref{so1}]. The aim is to give a short proof of the condition for
 roundtripping of conversions between two floating-point formats.
+
+Note: all results presented here are well-known. The proofs of the main
+propositions are, as far as I know, original.
 
 \begin{section}{Preliminaries}
 
-We'll work with an idealised form of floating-point that ignores
-exponent bounds, NaNs, infinities and zeros. Roundtripping for negative floats
-doesn't behave substantially differently than for positive floats, so we also
-ignore negative floats and just work with positive floats. We'll only consider
-round-to-nearest rounding modes between the two formats, and we won't make any
-assumptions about which direction ties round in.
+We work with an idealised form of floating-point that ignores exponent bounds,
+NaNs, infinities and zeros. Roundtripping for negative floats behaves entirely
+analogously to that for positive floats, so for simplicity we only consider
+positive floats in what follows.  We consider only round-to-nearest rounding
+modes between floating-point formats, and we make no assumptions about which
+direction ties round in, so our results are equally applicable to the
+round-ties-to-even and the round-ties-away-from-zero rounding modes, for
+example.
 
 To be precise, here's what we'll mean by a floating-point number in what
 follows.
 
 \begin{definition}
-  For integers $p \ge 1$ and $B \ge 2$, a \textbf{precision-$p$ base-$B$
+  Given integers $p \ge 1$ and $B \ge 2$, a \textbf{precision-$p$ base-$B$
     floating-point number} is a positive rational number $x$ that can be
-  expressed in the form $m B^e$ for some integers $m$ and $e$, with $0 \le m <
-  B^p$.
+  expressed in the form $x = m B^e$ for some integers $m$ and $e$, with $0 \le
+  m < B^p$.
 \end{definition}
 
 We're interested in what happens when we convert a number in one floating-point
@@ -44,19 +54,19 @@ rounding to nearest. Specifically, we want to give necessary and sufficient
 conditions on the two formats for this double conversion to recover the number
 we started with.
 
-For the remainder of this note, we fix two floating-point formats.  We choose
+For the remainder of this note, we fix two floating-point formats. Choose
 integers $p \ge 1$, $q \ge 1$, $B \ge 2$ and $D\ge 2$. Write $\mathbf B$ for
 the set of all precision-$p$ base-$B$ floats, and $\mathbf D$ for the set of
 all precision-$q$ base-$D$ floats.
 
 \begin{definition}
-  We will say that a precision-$p$ base-$B$ float $x$ in $\mathbf B$
+  We say that a precision-$p$ base-$B$ float $x$ in $\mathbf B$
   \textbf{roundtrips through $\mathbf D$} if the nearest precision-$q$ base-$D$
   floating-point value to $x$ rounds back to $x$. Or in other words, let $y$ be
   the closest element of $\mathbf D$ to $x$. Then we require that $x$ is the
-  closest element of $\mathbf B$ to $y$. (In the event that $x$ is exactly
-  halfway between two elements of $\mathbf D$, we'll require that \emph{both}
-  those elements round back to $x$.)
+  closest element of $\mathbf B$ to $y$. In the event that $x$ is exactly
+  halfway between two elements of $\mathbf D$, we require that \emph{both}
+  those elements round back to $x$.
 
   We'll also say that the \emph{format} $\mathbf B$ roundtrips through $\mathbf
   D$ if every element of $\mathbf B$ roundtrips through $\mathbf D$.
@@ -64,7 +74,7 @@ all precision-$q$ base-$D$ floats.
 
 \end{section}
 
-\begin{section}{Roundtrip results}
+\begin{section}{Necessary and sufficient conditions}
 
 Now we can state the main propositions. There's a simple sufficient condition
 for roundtripping.
@@ -84,29 +94,37 @@ Under one additional hypothesis, this condition is also necessary.
 \end{proposition}
 
 The \emph{powers of a common base} condition excludes cases like $B = 4$ and $D
-= 8$, or $B = 5$ and $D = 25$, for example.
+= 8$, or $B = 25$ and $D = 5$.
 
 To prove the first proposition, we need a pair of lemmas relating to the
-spacing between successive floating-point numbers.
+spacing between adjacent floating-point numbers.
 
 \begin{lemma}
-  \label{small_gap}
-  Suppose that $x$ is an element of $\mathbf B$, and that $B^{e-1} < x \le
-  B^e$. Then any positive rational number $y$ satisfying $|x - y| < \frac12
-  B^{e-p}$ rounds back to $x$.
+  \label{close_implies_round}
+  Suppose that $x$ is an element of $\mathbf B$, and that $B^{e-1} < x \le B^e$
+  for some integer $e$. Then any positive rational number $y$ satisfying $|x -
+  y| < \frac12 B^{e-p}$ rounds back to $x$.
 \end{lemma}
 
 \begin{proof}
   This follows from the observation that within the closed interval $[B^{e-1},
-    B^e]$, successive floats in $\mathbf B$ are spaced exactly $B^{e-p}$ apart
-  from one another. Some care must be taken with the corner case where $x=B^e$,
-  where the next float up from $x$ is $B^e + B^{e-p+1}$ rather than $B^e +
-  B^{e-p}$. In particular, note that if we'd stated the condition on $e$ in the
-  form $B^{e-1} \le x < B^e$, the conclusion of the lemma would be false.
+    B^e]$, adjacent floats in $\mathbf B$ are spaced exactly $B^{e-p}$ apart
+  from one another, so if $y$ is within the interval $[B^{e-1}, B^e]$ then $x$
+  must be the closest element of $\mathbf B$ to $y$, and there's nothing more
+  to show. The only way for $y$ to \emph{not} be in the interval is if $x=B^e$
+  and $B^e < y < B^e + \frac12 B^{e-p}$. But then the next element of $\mathbf
+  B$ up from $x$ is $B^e + B^{e-p+1}$, and again $x$ is the closest element
+  of $\mathbf B$ to $y$.
 \end{proof}
 
+Note that in the above, the strictness of the inequalities in our condition on
+$e$ is important: if we replace the condition $B^{e-1} < x \le B^e$ with
+$B^{e-1}\le x < B^e$, the conclusion is no longer valid, since there will be
+values $y$ just below $B^{e-1}$ which round to the next float down from
+$B^{e-1}$.
+
 \begin{lemma}
-  \label{large_gap}
+  \label{round_implies_close}
   Suppose that $x$ is any positive rational number, that $f$ is the unique
   integer such that $D^{f-1} < x \le D^f$, and that $y$ is a closest element of
   $\mathbf D$ to $x$, choosing either possibility in the case of a tie. Then
@@ -127,7 +145,7 @@ The proof of the sufficient condition is now straightforward.
   x \le B^e$ and $D^{f-1} < x \le D^f$. Then we have:
   \begin{align*}
     |x - y|
-    &\le \frac12 D^{f-q} && \text{by Lemma \ref{large_gap}}\\
+    &\le \frac12 D^{f-q} && \text{by Lemma \ref{round_implies_close}}\\
     &= \frac12 D^{f-1} D^{1-q} \\
     &< \frac12 x D^{1-q} && \text{by choice of $f$}\\
     &\le \frac12 x B^{-p} &&
@@ -135,8 +153,8 @@ The proof of the sufficient condition is now straightforward.
     &\le \frac12 B^e B^{-p} && \text{by choice of $e$}\\
     &= \frac12 B^{e-p} \\
   \end{align*}
-  So $|x - y| < \frac12 B^{e-p}$, and it follows from Lemma \ref{small_gap}
-  that $y$ rounds back to $x$.
+  So $|x - y| < \frac12 B^{e-p}$, and it follows from Lemma
+  \ref{close_implies_round} that $y$ rounds back to $x$.
 \end{proof}
 
 For the necessary condition, we'll need the following result from elementary
@@ -151,39 +169,70 @@ number theory.
 \end{fact}
 
 \begin{proof}
-  Take logs to base $D$ and apply Kronecker's approximation theorem.
+  Given our target interval $(a, b)$, it's enough to show that the interval
+  $(1, b/a)$ contains at least one such number, $\gamma$ say.  Given such a
+  $\gamma$, there must be a power of $\gamma$ within $(a, b)$. (Take $k =
+  \lfloor \log_{\gamma}a\rfloor$, then $\gamma^k \le a < \gamma^{k+1}$, and
+  $\gamma^{k+1} < (b/a)\gamma^k \le (b/a)a = b$. So $\gamma^{k+1}$ lies in the
+  interval $(a, b)$.)
+
+  So it's enough to prove the fact in the case $a=1$. Suppose, for a
+  contradiction, that the interval $(1, b)$ contains no elements of the form
+  $B^e / D^f$. Then the set of all elements of the form $B^e / D^f$ is discrete
+  (if $\gamma$ is any such element, then there can be no other elements within
+  the interval $(\gamma/b, \gamma b)$), and so amongst all elements of the form
+  $B^e / D^f$ larger than $1$ there must be a smallest such element; call it
+  $C$. Now \emph{all} elements of the form $B^e/D^f$ must be integral powers of
+  $C$ (let $\gamma$ be any such element, then $1 \le \gamma /
+  C^{\lfloor\log_C(\gamma)\rfloor} < C$; this contradicts the choice of $C$ as
+  the smallest element \emph{unless} we have $1 = \gamma /
+  C^{\lfloor\log_C(\gamma)\rfloor}$), so we have $B=C^m$ and $D=C^n$ for some
+  positive integers $m$ and $n$. Remembering that $C$ is rational, it follows
+  that $C$ must be an integer, hence that $B$ and $D$ are powers of a common
+  base, contradicting our assumptions.
 \end{proof}
 
-Now we can prove the necessary condition.
+Now we can prove the necessary condition. We'll show the contrapositive, namely
+that if $B^p > D^{q-1}$ then there's some element $x$ of $\mathbf B$ that fails
+to roundtrip through $\mathbf D$. Before we embark on the proof proper, let's
+sketch the main idea. To find our roundtrip counterexample $x$, we look for a
+region of the positive reals where the gap between successive elements of
+$\mathbf B$ is \emph{smaller} than the gap between successive elements of
+$\mathbf D$. In relative terms, the gap between successive elements of $\mathbf
+B$ is smallest just \emph{before} a power of $B$, while the gap between
+successive elements of $\mathbf D$ is largest just \emph{after} a power of
+$D$. So if there's an $x$ that fails to roundtrip, a good place to look for it
+would be in an interval $[D^f, B^e]$ where $D^f$ and $B^e$ are very close to
+one another. In such an interval, the gap between successive elements of
+$\mathbf D$ is $D^{f-q+1}$, while the gap between successive elements of
+$\mathbf B$ is $B^{e-p}$. Our hypothesis that $B^p > D^{q-1}$ implies that $1 <
+B^p / D^{q-1}$, so by Fact \ref{dense_power_ratios} we should be able to find
+$e$ and $f$ so that $1 < B^e / D^f < B^p / D^{q-1}$. Then our gaps satisfy
+$B^{e-p} < D^{f-q+1}$, as required.
+
+Making this idea rigorous turns out to be a bit fiddly: just because the gaps
+work out nicely in a particular interval, that doesn't guarantee that we can
+find a suitable $x$ in that interval: the interval might be too small to
+contain \emph{any} suitable values $x$.
+
+It turns out that we can always find a roundtrip failure $x$ of the form
+$x=B^e$: by careful choice of $e$ and $f$, we'll be able to find an interval
+$[D^f, B^e]$ so that
+\begin{enumerate}
+  \item $B^e$ is sufficiently close to $D^f$ that $B^e$ rounds down to $D^f$
+    when converting from $\mathbf B$ to $\mathbf D$, but
+  \item $D^f$ is sufficiently far away from $B^e$ that $D^f$ rounds down to
+    some value \emph{smaller} than $B^e$ when converting back from $\mathbf D$
+    to $\mathbf B$.
+\end{enumerate}
+Then $x=B^e$ gives us our roundtrip failure. Here's the formal proof.
 
 \begin{proof}[Proof of Proposition \ref{roundtrip_necessary_condition}]
   We prove the contrapositive: that if $B^p > D^{q-1}$ then there's at least
   one element $x$ of $\mathbf B$ that fails to roundtrip through $\mathbf D$.
-
-  To provide some intuition: we're looking for a region of the positive reals
-  where the gap between successive elements of $\mathbf B$ is \emph{smaller}
-  than the gap between successive elements of $\mathbf D$. In relative terms,
-  the gap between successive elements of $\mathbf B$ is smallest just
-  \emph{before} a power of $B$, while the gap between successive elements of
-  $\mathbf D$ is largest just \emph{after} a power of $D$. So if there's an $x$
-  that fails to roundtrip, a good place to look for it would be in an interval
-  $[D^f, B^e]$ where $D^f$ and $B^e$ are very close to one another. In such an
-  interval, the gap between successive elements of $\mathbf D$ is $D^{f-q+1}$,
-  while the gap between successive elements of $\mathbf B$ is $B^{e-p}$. Our
-  hypothesis that $B^p > D^{q-1}$ implies that $1 < B^p / D^{q-1}$, so by Fact
-  \ref{dense_power_ratios} we should be able to find $e$ and $f$ so that $1 <
-  B^e / D^f < B^p / D^{q-1}$. Then our gaps satisfy $B^{e-p} < D^{f-q+1}$, as
-  required.
-
-  Making the above rigorous is a tiny bit fiddly: if we make $D^f$ \emph{too}
-  close to $B^e$, then the interval $(D^f, B^e)$ is too small to contain any
-  floats, making it hard to find a suitable $x$. So we'll also need to give a
-  lower bound on how close $D^f$ and $B^e$ get.
-
-  It turns out that we can always find a roundtrip failure of the form $x =
-  B^e$: we'll arrange that $x$ rounds down to an exact power of $D$, $D^f$, and
-  then that \emph{that} power of $D$ in turn rounds \emph{down} again to
-  something smaller than $B^e$, breaking roundtripping.
+  We'll find such an $x$ of the form $x=B^e$, and show that there exist
+  integers $e$ and $f$ such that $B^e$ rounds down to $D^f$, but $D^f$ rounds
+  down again to some value smaller than $B^e$.
 
   For $B^e$ to round down to $D^f$, we need:
   $$D^f < B^e < D^f + \frac12 D^{f-q+1},$$ while for $D^f$ to round down to
@@ -233,10 +282,20 @@ Now we can prove the necessary condition.
   $10000$ for which there's a solution). So $x = 2^{6408}$ fails to roundtrip:
   the nearest $4$-digit decimal to $x$ is $10^{1929}$, and the nearest $10$-bit
   binary value to $10^{1929}$ is $2^{6408} - 2^{6398}$.
+
+  There are other, smaller values in $\mathbf B$ that fail to roundtrip: the
+  first such value larger than $1$ is $1017\cdot 2^{774}$, which lies in the
+  interval $(10^{236}, 2^{784})$; values from $\mathbf D$ have a spacing of
+  $10^{233}$ in this interval, while values from $\mathbf B$ are spaced
+  $2^{774}$ apart; we have $10^{233} / 2^{774} = 1.006429...$.
+
+  For floats larger than $1$, the \emph{first} interval where floats from
+  $\mathbf B$ are spaced more closely than floats from $\mathbf D$ is
+  $(10^{31}, 2^{103})$, but it turns out that there are no roundtrip
+  counterexamples in this interval.
 \end{example}
 
-To complete the picture, we're missing one special case. I'll state it here
-without proof for now.
+To complete the picture, we're missing one special case.
 
 \begin{proposition}
   Suppose that $B$ and $D$ are powers of a common base $C$, and choose $C$ to
@@ -245,6 +304,54 @@ without proof for now.
   $$B^p \le C D^{q-1}.$$
 \end{proposition}
 
+\begin{proof}
+  For sufficiency, we prove something more, namely that if $$B^p \le C
+  D^{q-1}$$ then every element $x$ of $\mathbf B$ is already an element of
+  $\mathbf D$. Then roundtripping follows immediately.
+
+  Given an element $x$ of $\mathbf B$, we can write
+  $$x = mB^e$$
+  for some positive integer $m < B^p$ and integer $e$. Now choose $f$ such
+  that
+  $$D^f \le B^e < D^{f+1},$$ then we can write $$x = (mB^eD^{-f})D^f.$$ To show
+  that $x$ is representable in $\mathbf D$, we need to show that the
+  coefficient $mB^eD^{-f}$ of $D^f$ is an integer, and that it's strictly less
+  than $D^q$. It's an integer because $B^eD^{-f}$ is a power of $C$ that's
+  larger than $1$. To see the bound, first note that our choice of $f$ ensures
+  that $CB^e \le D^{f+1}$. Now
+  \begin{align*}
+    mB^eD^{-f}
+    & < B^{p+e}D^{-f} \\
+    & \le CD^{q-1}B^eD^{-f} \\
+    & \le D^{f+1}D^{q-1}D^{-f} \\
+    & = D^q,\\
+  \end{align*}
+  as required.
+
+  For the converse, suppose that $B^p > CD^{q-1}$. Choose integer exponents $e$
+  and $f$ such that $B^e / D^f = C$, and consider the interval $[D^f,
+    B^e]$. The endpoints of the interval are representable in both formats
+  simultaneously, so the interval maps to itself under rounding in either
+  direction.
+
+  So to show that roundtripping fails, it's enough to show that there are more
+  $\mathbf B$-floats in this interval than $\mathbf D$-floats, or equivalently,
+  that the $\mathbf B$-floats are denser than the $\mathbf D$-floats.
+
+  But the spacing between any two adjacent $\mathbf B$-floats in this interval
+  is $B^{e-p}$, while the spacing between any two adjacent $\mathbf D$-floats
+  is $D^{f-q+1}$, and we have:
+  \begin{align*}
+    B^{e-p}
+    &= CD^fB^{-p} \\
+    &< D^{1-q}D^f \\
+    &= D^{f-q+1}.
+  \end{align*}
+  This completes the proof.
+\end{proof}
+
+
+
 \begin{example}
   In the special case where $B=D$, we have $C = B = D$, and the proposition
   above tells us that $\mathbf B$ roundtrips through $\mathbf D$ if and only if
@@ -252,5 +359,13 @@ without proof for now.
 \end{example}
 
 \end{section}
+
+\section*{References}
+\begin{enumerate}
+  \renewcommand\labelenumi{[\theenumi]}
+  \item \label{so1} ``How to find an original string representation for lower
+    precision float values in Python?'',
+    \url{http://stackoverflow.com/a/35708911/270986}
+\end{enumerate}
 
 \end{document}
