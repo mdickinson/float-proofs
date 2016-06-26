@@ -1,6 +1,7 @@
 Require Import OrdersFacts.
 Require Import OrdersTac.
 Require Import QArith.
+Require Import Qpower.
 Require Import QOrderedType.
 
 (* Auxiliary facts about Q that don't seem to be readily to
@@ -12,6 +13,21 @@ Lemma Q_mul_pos_pos : forall p q : Q, 0 < p -> 0 < q -> 0 < p * q.
 Proof.
   intros p q; unfold Qlt; simpl; rewrite ?Z.mul_1_r; apply Z.mul_pos_pos.
 Qed.
+
+Lemma Qpower_nonzero_nonzero : forall (q : Q) (n : Z), ~(0 == q) -> ~(0 == q^n).
+Proof.
+  intros q n q_nonzero qn_zero; now assert (0 == 1) by (
+  setoid_replace 1 with ((q * (/q))^n) by
+  (rewrite Qmult_inv_r by (now apply QOrder.neq_sym); now rewrite Qpower_1);
+  rewrite Qmult_power, <- qn_zero; auto with qarith).
+Qed.
+
+Lemma Qpower_pos_pos : forall (q : Q) (n : Z), 0 < q -> 0 < q^n.
+Proof.
+  intros q n q_pos; apply QOrder.le_neq_lt;
+  [apply Qpower_pos | apply Qpower_nonzero_nonzero]; auto with qarith.
+Qed.
+
 
 
 Definition QPos := { x : Q | 0 < x }.
@@ -137,7 +153,7 @@ Qed.
 Lemma mul_1_r p : p * 1 == p.
 Proof.
   apply Qmult_1_r.
-Qed. 
+Qed.
 
 (* Multiplication and order. *)
 
@@ -194,6 +210,13 @@ Proof.
   unfold Qlt in q; simpl in q; ring_simplify in q; easy.
 Qed.
 
+(* Power. *)
+
+Definition power (x : t) (n : Z) : t.
+Proof.
+  refine (exist _ (Qpower (!x) n) _); apply Qpower_pos_pos; now destruct x.
+Qed.
+
 End QPos.
 
 (* Re-export notations. *)
@@ -212,6 +235,8 @@ Infix "<?" := QPos.ltb (at level 70, no associativity) : QPos_scope.
 Infix "*" := QPos.mul : QPos_scope.
 Infix "/" := QPos.div : QPos_scope.
 Notation "/ p" := (QPos.inv p) : QPos_scope.
+
+Notation "q ^ n" := (QPos.power q n) : QPos_scope.
 
 Notation "1" := QPos.one : QPos_scope.
 Notation "2" := QPos.two : QPos_scope.

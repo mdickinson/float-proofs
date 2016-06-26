@@ -7,24 +7,19 @@ Local Open Scope Z.
 Inductive interval : Set :=
 | build_interval m n (m_le_n : m <= n) : interval.
 
-Definition length (i : interval) :=
-  match i with
-  | @build_interval m n _ => n - m
-  end.
-
 Definition low (i : interval) :=
   match i with
   | @build_interval m n _ => m
   end.
 
-Definition mid (i : interval) :=
-  match i with
-  | @build_interval m n _ => (m + n) / 2
-  end.
-
 Definition high (i : interval) :=
   match i with
   | @build_interval m n _ => n
+  end.
+
+Definition mid (i : interval) :=
+  match i with
+  | @build_interval m n _ => (m + n) / 2
   end.
 
 Lemma low_le_mid i : low i <= mid i.
@@ -43,6 +38,11 @@ Qed.
 Definition low_half i := build_interval (low_le_mid i).
 Definition high_half i := build_interval (mid_le_high i).
 
+Definition length (i : interval) :=
+  match i with
+  | @build_interval m n _ => n - m
+  end.
+
 (* Now we can describe the type of bisection trees. *)
 
 Inductive bisection_tree : interval -> Set :=
@@ -53,9 +53,6 @@ Inductive bisection_tree : interval -> Set :=
 (* We want to define a bisection tree for each nontrivial interval i.
 
    First, the lemmas we'll need to make the recursive definition. *)
-
-Check Z_div_mult_full.
-
 
 Lemma elim_half_eq a b : a * 2 = b -> a = b / 2.
 Proof.
@@ -192,14 +189,10 @@ Section bisect_search_tree_facts.
 
 End bisect_search_tree_facts.
 
-Check bisect_search_tree.
-
 (*
 bisect_search_tree
      : (Z -> bool) -> forall i : interval, bisection_tree i -> interval
 *)
-
-Check bisect_interval.
 
 (*
 bisect_interval
@@ -208,8 +201,6 @@ bisect_interval
 
 Definition bisection_search P i i_nontrivial :=
   bisect_search_tree P (bisect_interval i i_nontrivial).
-
-Check bisection_search.
 
 (*
 bisection_search
@@ -242,10 +233,81 @@ Section bisection_search_facts.
     apply low_false.
   Qed.
 
+  Theorem bisection_search_low_high : high result = low result + 1.
+  Proof.
+    replace 1 with (length result) by (apply bisection_search_converges).
+    unfold low, high, length; destruct result; auto with zarith.
+  Qed.
+
 End bisection_search_facts.
 
-Check bisection_search_converges.
-Check bisection_search_high_true.
+Section first_true.
+
+  Variable P : Z -> bool.
+  Hypothesis P_monotonic : forall m n, P m = false -> P n = true -> m < n.
+
+  Variables m n : Z.
+  Hypothesis P_false : P m = false.
+  Hypothesis P_true : P n = true.
+
+  Let m_le_n : m <= n.
+  Proof.
+    apply Z.lt_le_incl; auto.
+  Qed.
+  
+  Let initial := build_interval m_le_n.
+
+  Let initial_nontrivial : 0 < length initial.
+  Proof.
+    unfold length, initial.
+    assert (m < n -> 0 < n - m) by auto with zarith.
+    auto.
+  Qed.
+    
+  Definition first_true := high (bisection_search P initial initial_nontrivial).
+  Definition last_false := low (bisection_search P initial initial_nontrivial).
+
+  (* Basic facts. *)
+
+  Theorem first_true_last_false : first_true = last_false + 1.
+  Proof.
+    apply bisection_search_low_high.
+  Qed.
+
+  Theorem first_true_spec k : P k = true  <->  first_true <= k.
+  Proof.
+    split; intro H.
+    - rewrite first_true_last_false.
+      apply Z.le_succ_l.
+      apply P_monotonic.
+      apply bisection_search_low_false.
+      apply P_false.
+      apply H.
+    - apply Bool.not_false_is_true; contradict H; apply Zlt_not_le.
+      apply P_monotonic.
+      apply H.
+      apply bisection_search_high_true.
+      apply P_true.
+  Qed.
+
+  Theorem last_false_spec k : P k = false  <->  k <= last_false.
+  Proof.
+    split; intro H.
+    - replace last_false with (first_true - 1) by (rewrite first_true_last_false; ring).      apply Z.lt_le_pred.
+      apply P_monotonic.
+      apply H.
+      apply bisection_search_high_true.
+      auto.
+    - apply Bool.not_true_is_false.
+      contradict H.
+      apply Zlt_not_le.
+      apply P_monotonic.
+      apply bisection_search_low_false.
+      auto.
+      auto.
+  Qed.
+End first_true.
+
 
 Section bisection_search_example.
 
@@ -255,68 +317,6 @@ Section bisection_search_example.
 
   Definition result : interval. now refine (bisection_search P i _). Defined.
 
-  Eval compute in high result.
+  (* Eval compute in high result. *)
 
 End bisection_search_example.
-
-Section first_true.
-  (* Using the bisection search to find the first integer
-     for which a given proposition is true. *)
-
-  Variable P : Z -> bool.
-  Hypothesis P_monotonic : forall n m, n <= m -> P n = true -> P m = true.
-
-  Variables low high : Z.
-  Hypothesis P_low_false : P low = false.
-  Hypothesis P_high_true : P high = true.
-
-  (* Given the above setup, there's a unique integer n such
-     that P m = true for all n <= m and P m = false for all m < n. *)
-
-  Lemma low_lt_high : low < high.
-  Proof.
-    SearchAbout (_ < _  \/ _).
-    destruct (Z.lt_ge_cases low high).
-    - easy.
-    - assert (P low = true) by (now apply (P_monotonic H)).
-      assert (false = true).
-      transitivity (P low).
-      auto.
-      auto.
-      contradict H1. easy.
-  Qed.
-
-  Lemma low_le_high : low <= high.
-  Proof.
-    apply Z.lt_le_incl, low_lt_high.
-  Qed.
-
-  Let search_interval := build_interval low_le_high.
-
-  Definition first_true : Z.
-  Proof.
-    refine (Top.high (bisection_search P search_interval _)).
-    unfold length, search_interval.
-    pose proof low_lt_high.
-    auto with zarith.
-  Defined.
-
-  Theorem first_true_is_true : P first_true = true.
-  Proof.
-    unfold first_true.
-    apply bisection_search_high_true.
-    now simpl.
-  Qed.
-
-  (* Want to show that for all m,
-
-     P m = true <-> first_true <= m.
-
-
-
-
-   *)
-
-End first_true.
-
-Check first_true.
